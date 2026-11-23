@@ -192,3 +192,18 @@ tfoot td{font-weight:700;border-bottom:0}
 .hero .fl-br{width:clamp(140px,16vw,220px)}
 .login-page .fl-tl{width:clamp(120px,14vw,190px)}
 @media (max-width:640px){.hero .fl-tl{left:-70px;top:-60px}.fl-br,.fl-bl{opacity:.75}}
+
+/* ── 새 메뉴 ── */
+.side-a{color:#2F5D8A;background:#EAF1F8}.side-b{color:var(--accent);background:var(--accent-tint)}
+.mini-check{width:20px;height:20px;accent-color:var(--accent);margin:0;vertical-align:middle}
+.plan{display:flex;gap:14px;align-items:center;padding:12px;background:var(--bg);border-radius:12px}
+.plan .tm{width:64px;flex:none;font-family:'Gowun Dodum',sans-serif;font-weight:700;font-size:18px;color:var(--accent)}
+.plan.done{opacity:.55}.plan.done .tt{text-decoration:line-through}
+.shop-group{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.shop-group>header{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg)}
+.shop-opt{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line2)}
+.shop-opt .pr{font-weight:700;margin-left:auto;font-variant-numeric:tabular-nums}
+.best{font-size:12px;font-weight:700;color:var(--sage);background:var(--sage-tint);border-radius:999px;padding:2px 8px}
+.note{border-left:0;background:var(--bg);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.note .tp{font-size:13px;font-weight:700;color:var(--accent)}
+@media (max-width:640px){.side nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}.side nav button{white-space:nowrap;flex:none}}
