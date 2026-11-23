@@ -1,6 +1,6 @@
 // 앱 설치용 서비스 워커: 사이트 화면 파일만 보관합니다.
 // 준비 기록(Firebase 데이터)과 로그인 정보는 보관하지 않고 언제나 서버에서 새로 받습니다.
-const CACHE = "weddingnote-v5";
+const CACHE = "weddingnote-v6";
 const SHELL = ["./", "index.html", "login.html", "app.html", "invite.html", "privacy.html",
   "css/style.css", "js/app.js", "js/store.js", "js/common.js", "js/flowers.js", "js/firebase-config.js", "js/pwa.js", "js/inapp.js",
   "icons/icon-192.png", "icons/icon-512.png", "manifest.webmanifest"];
