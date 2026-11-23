@@ -2,7 +2,7 @@
 // 화면 코드는 이 파일의 함수만 사용하므로, 저장 방식이 달라도 화면은 같습니다.
 import { firebaseConfig, KAKAO_PROVIDER_ID, DEMO_MODE } from "./firebase-config.js";
 
-export const COLLECTIONS = ["tasks", "items", "payments", "events", "photos"];
+export const COLLECTIONS = ["tasks", "items", "payments", "events", "photos", "guests", "gifts", "dayplan", "shopping", "notes"];
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
 
 let storePromise = null;
@@ -215,7 +215,7 @@ function makeDemoStore() {
     async readInvite() { return { cid: "demo", fromName: "체험 사용자", expired: false, mine: false }; },
     async acceptInvite() { throw new Error("체험 모드에서는 초대를 수락할 수 없어요. Firebase 설정 후 사용해 주세요."); },
     async leave() {},
-    async exportAll() { const s = state(); return { 내려받은때: new Date().toISOString(), 내정보: s.profile, 준비표: s.couple, tasks: s.tasks, items: s.items, payments: s.payments, events: s.events, photos: s.photos || [] }; },
+    async exportAll() { const s = state(); return { 내려받은때: new Date().toISOString(), 내정보: s.profile, 준비표: s.couple, tasks: s.tasks, items: s.items, payments: s.payments, events: s.events, photos: s.photos || [], guests: s.guests || [], gifts: s.gifts || [], dayplan: s.dayplan || [], shopping: s.shopping || [], notes: s.notes || [] }; },
     async deleteAccount() { try { localStorage.removeItem(KEY); } catch (e) { /* 무시 */ } authCb && authCb(null); }
   };
 }
