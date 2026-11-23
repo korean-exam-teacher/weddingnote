@@ -1,12 +1,14 @@
 /* 웨딩노트 둘 — 공통 스타일 */
 :root{
-  --ink:#1B1F2A; --ink2:#3A4050; --muted:#5A6172; --line:#E6E8EE; --line2:#EEF0F4;
-  --bg:#F5F6F9; --white:#FFFFFF; --accent:#A3324F; --accent-dark:#7E2239; --accent-tint:#FBEDF1;
+  /* 5월의 정원: 장미·작약 분홍, 살구, 잎사귀 초록 (아이보리·크림 톤은 쓰지 않음) */
+  --ink:#2B2430; --ink2:#463C4A; --muted:#6B5F6E; --line:#F0DDE2; --line2:#F6E8EC;
+  --bg:#FCF3F5; --white:#FFFFFF; --accent:#C2475F; --accent-dark:#9E3249; --accent-tint:#FCE8ED;
+  --peach:#F4A98C; --sage:#6E8F72; --sage-tint:#EEF4EE;
   --kakao:#FEE500; --ok:#3F6B4F; --ok-tint:#EAF3EC; --info:#2F5D8A; --info-tint:#EAF1F8; --warn:#8A4B12; --warn-tint:#FBF0E4;
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:'Noto Sans KR',system-ui,sans-serif;color:var(--ink);background:var(--white);line-height:1.6}
-h1,h2,h3{font-family:'IBM Plex Sans KR','Noto Sans KR',sans-serif;line-height:1.35;margin:0}
+h1,h2,h3{font-family:'Gowun Dodum','Noto Sans KR',sans-serif;letter-spacing:-.01em;line-height:1.35;margin:0}
 a{color:var(--accent)}a:hover{color:var(--accent-dark)}
 img{max-width:100%}
 .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
@@ -25,7 +27,7 @@ img{max-width:100%}
 /* 상단 */
 .topbar{border-bottom:1px solid var(--line);background:#fff}
 .topbar nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px;max-width:1200px;margin:0 auto}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-family:'IBM Plex Sans KR',sans-serif;font-weight:700;font-size:19px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-family:'Gowun Dodum',sans-serif;font-weight:700;font-size:20px}
 .brand:hover{color:var(--ink)}
 .brand-mark{width:36px;height:36px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center}
 .menu{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
@@ -48,11 +50,11 @@ img{max-width:100%}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
 .card{border:1px solid var(--line);border-radius:16px;padding:26px;display:flex;flex-direction:column;gap:10px;background:#fff}
 .card h3{font-size:19px}.card p{margin:0;color:#4A5163}
-.dark{background:var(--ink);color:#fff}
-.dark .card{background:transparent;border-color:#3A4050}.dark .card p{color:#C9CDD6}
-.step-no{font-family:'IBM Plex Sans KR',sans-serif;font-weight:700;color:#F2A7B9}
+.dark{background:#3B2A35;color:#fff}
+.dark .card{background:transparent;border-color:#5C4654}.dark .card p{color:#E6D6DD}
+.step-no{font-family:'Gowun Dodum',sans-serif;font-weight:700;color:#F7C9D2}
 .road{background:var(--bg);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:10px}
-.road strong{font-family:'IBM Plex Sans KR',sans-serif;font-size:21px;color:var(--accent)}
+.road strong{font-family:'Gowun Dodum',sans-serif;font-size:21px;color:var(--accent)}
 .cta{background:var(--accent-tint);border-radius:24px;padding:48px 36px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between}
 footer.site{border-top:1px solid var(--line)}
 footer.site .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding-top:24px;padding-bottom:24px;font-size:14px;color:var(--muted)}
@@ -83,7 +85,7 @@ footer.site a{color:var(--muted)}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
 .stat{background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:4px}
 .stat .label{font-size:14px;color:var(--muted)}
-.stat .value{font-family:'IBM Plex Sans KR',sans-serif;font-size:28px;font-weight:700}
+.stat .value{font-family:'Gowun Dodum',sans-serif;font-size:28px;font-weight:700}
 .stat .sub{font-size:13px;color:var(--muted)}
 .bar{height:8px;border-radius:999px;background:var(--line2);overflow:hidden}.bar>span{display:block;height:100%;background:var(--accent);border-radius:999px}
 .notice{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ok);background:var(--ok-tint);border-radius:999px;padding:8px 14px}
@@ -110,7 +112,7 @@ tfoot td{font-weight:700;border-bottom:0}
 .tag{font-size:13px;border-radius:999px;padding:3px 10px;white-space:nowrap}
 .tag-ok{color:var(--ok);background:var(--ok-tint)}.tag-info{color:var(--info);background:var(--info-tint)}.tag-warn{color:var(--warn);background:var(--warn-tint)}
 .event{display:flex;gap:14px;align-items:center;padding:12px;background:var(--bg);border-radius:12px}
-.event .d{width:76px;text-align:center;font-family:'IBM Plex Sans KR',sans-serif;font-weight:700;color:var(--accent);flex:none}
+.event .d{width:76px;text-align:center;font-family:'Gowun Dodum',sans-serif;font-weight:700;color:var(--accent);flex:none}
 .empty{color:var(--muted);font-size:15px;padding:12px 0}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;font-size:15px;z-index:50;max-width:90vw}
 .danger-zone{border:1px solid #E4B8BD;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}
@@ -134,3 +136,42 @@ tfoot td{font-weight:700;border-bottom:0}
   .side nav{flex-direction:row;flex-wrap:wrap}
   .me{margin-top:0}
 }
+
+/* ── 5월 꽃 장식 ── */
+.has-flowers{position:relative;overflow:hidden}
+.has-flowers>*:not([data-flowers]){position:relative;z-index:1}
+[data-flowers]{position:absolute;pointer-events:none;z-index:0}
+[data-flowers] svg{display:block;width:100%;height:auto}
+.fl-tl{top:-30px;left:-40px;width:clamp(160px,22vw,300px);transform:rotate(-8deg)}
+.fl-tr{top:-30px;right:-40px;width:clamp(160px,22vw,300px);transform:rotate(8deg)}
+.fl-bl{bottom:-50px;left:-40px;width:clamp(140px,18vw,240px);transform:rotate(190deg)}
+.fl-br{bottom:-50px;right:-40px;width:clamp(140px,18vw,240px);transform:rotate(170deg)}
+.fl-garland{position:static;width:100%;max-width:640px;margin:0 auto}
+.may-badge{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--sage);background:var(--sage-tint);border-radius:999px;padding:6px 14px}
+
+/* ── 준비표 첫 화면(대표 사진) ── */
+.hero-card{position:relative;overflow:hidden;border-radius:22px;min-height:300px;padding:32px;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;background:linear-gradient(135deg,#FCE8ED,#FDEFE9 55%,#EEF4EE);color:var(--ink)}
+.hero-card.photo{color:#fff;background-size:cover;background-position:center}
+.hero-card.photo::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(43,20,32,.05) 30%,rgba(43,20,32,.68));z-index:0}
+.hero-card>*{position:relative;z-index:1}
+.hero-card .dd{font-family:'Gowun Dodum',sans-serif;font-size:clamp(44px,7vw,68px);font-weight:700;line-height:1.05}
+.hero-card .names{font-family:'Gowun Dodum',sans-serif;font-size:clamp(20px,2.6vw,26px)}
+.hero-card .meta{font-size:15px;opacity:.92}
+.hero-card:not(.photo) .dd{color:var(--accent)}
+.hero-card .fl-tr,.hero-card .fl-bl{z-index:0}
+.hero-card.photo [data-flowers]{opacity:.9}
+
+/* ── 우리 사진 ── */
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.photo-item{position:relative;border-radius:14px;overflow:hidden;background:var(--line2);aspect-ratio:4/3}
+.photo-item img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-item .cap{position:absolute;left:0;right:0;bottom:0;padding:22px 10px 8px;background:linear-gradient(180deg,transparent,rgba(43,20,32,.6));color:#fff;font-size:13px}
+.photo-item .acts{position:absolute;top:6px;right:6px;display:flex;gap:4px}
+.photo-item .acts button{min-height:32px;padding:4px 10px;border:0;border-radius:8px;background:rgba(255,255,255,.92);font:inherit;font-size:12px;color:var(--ink);cursor:pointer}
+.photo-item.cover{outline:3px solid var(--accent);outline-offset:-3px}
+.drop{border:2px dashed #E7B7C3;border-radius:14px;padding:18px;text-align:center;color:var(--muted);font-size:14px;background:#fff}
+
+.hero .fl-tl{width:clamp(110px,12vw,160px);top:-46px;left:-58px}
+.hero .fl-br{width:clamp(140px,16vw,220px)}
+.login-page .fl-tl{width:clamp(120px,14vw,190px)}
+@media (max-width:640px){.hero .fl-tl{left:-70px;top:-60px}.fl-br,.fl-bl{opacity:.75}}

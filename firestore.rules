@@ -9,7 +9,7 @@ service cloud.firestore {
     // 두 사람이 처음 로그인하면 화면에 회원 번호가 보이고, 그 값을 아래에 넣습니다.
     // 목록에 없는 계정은 카카오 로그인에 성공해도 아무것도 읽거나 쓸 수 없습니다.
     function allowed() {
-      return request.auth.uid in ['아직_비어_있음_1', '아직_비어_있음_2'];
+      return request.auth.uid in ['JSv5PWw1nKMHSlYK5JVVTIK5Rmo1', 'K9oula6jcyclZvCuJwmdhJoYwhE2'];
     }
     function signedIn() { return request.auth != null && allowed(); }
     function me() { return request.auth.uid; }
@@ -30,7 +30,7 @@ service cloud.firestore {
     // ── 준비표: 구성원(최대 2명)만 ──
     match /couples/{cid} {
       function fieldsOk() {
-        return request.resource.data.keys().hasOnly(['members', 'names', 'weddingDate', 'venue', 'budgetTotal', 'inviteToken', 'joinToken', 'createdAt'])
+        return request.resource.data.keys().hasOnly(['members', 'names', 'weddingDate', 'ceremonyTime', 'venue', 'hall', 'venueAddr', 'budgetTotal', 'coverPhotoId', 'inviteToken', 'joinToken', 'createdAt'])
           && request.resource.data.members is list && request.resource.data.members.size() <= 2;
       }
       // 구성원이 내용을 고침(구성원 목록은 그대로)
@@ -61,11 +61,13 @@ service cloud.firestore {
       allow update: if signedIn() && fieldsOk() && (memberEdit() || joinWithInvite() || leave());
       allow delete: if signedIn() && resource.data.members == [me()];
 
-      // 체크리스트·예산 항목·결제·일정
+      // 체크리스트·예산 항목·결제·일정·우리 사진
       match /{sub}/{docId} {
-        allow read, delete: if sub in ['tasks', 'items', 'payments', 'events'] && isMember(cid);
-        allow create, update: if sub in ['tasks', 'items', 'payments', 'events'] && isMember(cid)
-          && request.resource.data.size() <= 12;
+        allow read, delete: if sub in ['tasks', 'items', 'payments', 'events', 'photos'] && isMember(cid);
+        allow create, update: if sub in ['tasks', 'items', 'payments', 'events', 'photos'] && isMember(cid)
+          && request.resource.data.size() <= 12
+          && (sub != 'photos' || (request.resource.data.data is string
+              && request.resource.data.data.size() < 950000));
       }
     }
 

@@ -2,7 +2,7 @@
 // 화면 코드는 이 파일의 함수만 사용하므로, 저장 방식이 달라도 화면은 같습니다.
 import { firebaseConfig, KAKAO_PROVIDER_ID, DEMO_MODE } from "./firebase-config.js";
 
-export const COLLECTIONS = ["tasks", "items", "payments", "events"];
+export const COLLECTIONS = ["tasks", "items", "payments", "events", "photos"];
 const SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
 
 let storePromise = null;
@@ -192,7 +192,7 @@ function makeDemoStore() {
   let authCb = null;
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch (e) { return null; } };
   const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* 저장 불가 */ } subs.forEach((f) => f()); };
-  const state = () => load() || { signedIn: false, profile: { displayName: "" }, couple: emptyCouple("demo"), tasks: [], items: [], payments: [], events: [] };
+  const state = () => load() || { signedIn: false, profile: { displayName: "" }, couple: emptyCouple("demo"), tasks: [], items: [], payments: [], events: [], photos: [] };
   const id = () => Math.random().toString(36).slice(2, 10);
   const sub = (fn) => { subs.add(fn); fn(); return () => subs.delete(fn); };
 
@@ -206,8 +206,8 @@ function makeDemoStore() {
     async updateProfile(data) { const s = state(); Object.assign(s.profile, data); save(s); },
     watchCouple(cid, cb) { return sub(() => cb(state().couple)); },
     async updateCouple(cid, data) { const s = state(); Object.assign(s.couple, data); save(s); },
-    watch(cid, name, cb) { return sub(() => cb(state()[name])); },
-    async add(cid, name, data) { const s = state(); s[name].push({ id: id(), ...data, createdAt: Date.now(), by: "demo" }); save(s); },
+    watch(cid, name, cb) { return sub(() => cb(state()[name] || [])); },
+    async add(cid, name, data) { const s = state(); (s[name] = s[name] || []).push({ id: id(), ...data, createdAt: Date.now(), by: "demo" }); save(s); },
     async update(cid, name, docId, data) { const s = state(); const x = s[name].find((r) => r.id === docId); if (x) Object.assign(x, data); save(s); },
     async remove(cid, name, docId) { const s = state(); s[name] = s[name].filter((r) => r.id !== docId); save(s); },
     async createInvite(cid) { const t = randomToken(); const s = state(); s.couple.inviteToken = t; save(s); return t; },
@@ -215,7 +215,7 @@ function makeDemoStore() {
     async readInvite() { return { cid: "demo", fromName: "체험 사용자", expired: false, mine: false }; },
     async acceptInvite() { throw new Error("체험 모드에서는 초대를 수락할 수 없어요. Firebase 설정 후 사용해 주세요."); },
     async leave() {},
-    async exportAll() { const s = state(); return { 내려받은때: new Date().toISOString(), 내정보: s.profile, 준비표: s.couple, tasks: s.tasks, items: s.items, payments: s.payments, events: s.events }; },
+    async exportAll() { const s = state(); return { 내려받은때: new Date().toISOString(), 내정보: s.profile, 준비표: s.couple, tasks: s.tasks, items: s.items, payments: s.payments, events: s.events, photos: s.photos || [] }; },
     async deleteAccount() { try { localStorage.removeItem(KEY); } catch (e) { /* 무시 */ } authCb && authCb(null); }
   };
 }

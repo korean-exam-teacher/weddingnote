@@ -5,15 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>로그인 — 웨딩노트 둘</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#C2475F">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="웨딩노트">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div id="demo" class="demo-banner hidden">체험 모드예요. 로그인 없이 이 브라우저에만 저장돼요. 실제 카카오 로그인은 설정안내.md를 따라 Firebase를 연결하면 켜져요.</div>
-<main class="login-page">
+<main class="login-page has-flowers">
+  <div data-flowers="corner-left" class="fl-tl"></div><div data-flowers="corner-right" class="fl-br"></div>
   <section class="login-card" aria-labelledby="t">
     <a class="brand" href="index.html"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" aria-hidden="true"><circle cx="9" cy="12" r="5"></circle><circle cx="15" cy="12" r="5"></circle></svg></span>웨딩노트 둘</a>
     <div>
+      <span class="may-badge" style="margin-bottom:10px">5월의 신랑 신부를 위해</span>
       <h1 id="t" style="font-size:27px">카카오 계정으로<br>바로 시작하세요</h1>
       <p style="margin:8px 0 0;color:#4A5163">비밀번호를 따로 만들 필요가 없어요. 입력한 준비 기록은 로그인한 계정에 저장되어 어느 기기에서든 이어 볼 수 있어요.</p>
     </div>
@@ -46,6 +55,7 @@
     <div class="item"><div><h3 style="font-size:17px">내 기록은 내가 내려받아요</h3><p>저장된 내 정보를 언제든 열람하고 파일로 내려받을 수 있어요.</p></div></div>
   </section>
 </main>
+<script type="module" src="js/flowers.js"></script>
 <script type="module">
 import { getStore } from "./js/store.js";
 import { friendlyError } from "./js/common.js";
@@ -80,5 +90,6 @@ $("go").addEventListener("click", async () => {
   }
 });
 </script>
+<script type="module" src="js/pwa.js"></script>
 </body>
 </html>

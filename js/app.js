@@ -6,7 +6,7 @@ const $ = (id) => document.getElementById(id);
 const store = await getStore();
 if (store.demo) $("demo").classList.remove("hidden");
 
-const S = { cid: null, profile: {}, couple: {}, tasks: [], items: [], payments: [], events: [], filter: "all" };
+const S = { cid: null, profile: {}, couple: {}, tasks: [], items: [], payments: [], events: [], photos: [], filter: "all" };
 const unsubs = [];
 
 // ── 로그인 확인 ──
@@ -56,7 +56,16 @@ $("logout").addEventListener("click", async () => { await store.signOut(); locat
 
 // ── 계산 ──
 const names = () => ({ a: (S.couple.names && S.couple.names.a) || "신랑", b: (S.couple.names && S.couple.names.b) || "신부" });
-const paidOf = (itemId) => S.payments.filter((p) => p.itemId === itemId && p.done).reduce((s, p) => s + (p.amount || 0), 0);
+// 각 결제의 신랑·신부 몫. 예전 기록({amount, payer})도 알맞게 나눠 읽습니다.
+function shares(p) {
+  if (p.amountA != null || p.amountB != null) return { a: p.amountA || 0, b: p.amountB || 0 };
+  const amt = p.amount || 0, n = names();
+  if (p.payer === n.a) return { a: amt, b: 0 };
+  if (p.payer === n.b) return { a: 0, b: amt };
+  return { a: amt / 2, b: amt / 2 };
+}
+const amountOf = (p) => { const x = shares(p); return x.a + x.b; };
+const paidOf = (itemId) => S.payments.filter((p) => p.itemId === itemId && p.done).reduce((s, p) => s + amountOf(p), 0);
 const totalOf = (it) => (it.contract || 0) + (it.extra || 0);
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -70,7 +79,7 @@ function statusTag(it) {
 
 // ── 그리기 ──
 function renderAll() {
-  renderMe(); renderSummary(); renderTasks(); renderItems(); renderPayments(); renderEvents(); renderTogether(); fillInfoForm();
+  renderMe(); renderHero(); renderSummary(); renderTasks(); renderItems(); renderPayments(); renderEvents(); renderTogether(); renderPhotos(); fillInfoForm();
 }
 
 function renderMe() {
@@ -79,7 +88,9 @@ function renderMe() {
   $("meInitial").textContent = n ? n.slice(0, 1) : "나";
   const { a, b } = names();
   const opts = ["함께", a, b].map((x) => `<option>${esc(x)}</option>`).join("");
-  for (const id of ["ownerSelect", "payerSelect"]) {
+  $("lblA").textContent = `${a}이(가) 낸 금액`; $("lblB").textContent = `${b}이(가) 낸 금액`;
+  for (const [id, n] of [["thA", a], ["thB", b], ["thA2", a], ["thB2", b]]) $(id).textContent = n;
+  for (const id of ["ownerSelect"]) {
     const sel = $(id), v = sel.value; sel.innerHTML = opts; if (v) sel.value = v;
   }
 }
@@ -93,7 +104,7 @@ function renderSummary() {
   const done = S.tasks.length - left;
   const pct = S.tasks.length ? Math.round((done / S.tasks.length) * 100) : 0;
   const expected = S.items.reduce((s, it) => s + totalOf(it), 0);
-  const paid = S.payments.filter((p) => p.done).reduce((s, p) => s + (p.amount || 0), 0);
+  const paid = S.payments.filter((p) => p.done).reduce((s, p) => s + amountOf(p), 0);
   const nextPay = S.payments.filter((p) => !p.done).sort((x, y) => (x.date || "9").localeCompare(y.date || "9"))[0];
   const itemName = (id) => (S.items.find((i) => i.id === id) || {}).name || "항목";
   $("stats").innerHTML = `
@@ -108,7 +119,7 @@ function renderSummary() {
   const t = today();
   const ups = [
     ...S.events.filter((e) => e.date >= t).map((e) => ({ date: e.date, title: e.title, sub: [e.time, e.place].filter(Boolean).join(" · ") })),
-    ...S.payments.filter((p) => !p.done && p.date).map((p) => ({ date: p.date, title: `${itemName(p.itemId)} ${p.kind || ""} 결제`, sub: won(p.amount) }))
+    ...S.payments.filter((p) => !p.done && p.date).map((p) => ({ date: p.date, title: `${itemName(p.itemId)} ${p.kind || ""} 결제`, sub: won(amountOf(p)) }))
   ].sort((x, y) => x.date.localeCompare(y.date)).slice(0, 5);
   $("sumUpcoming").innerHTML = ups.length ? ups.map((u) => `<div class="event"><span class="d">${esc(fmtDate(u.date).replace(/ \(.\)/, ""))}</span><span style="display:flex;flex-direction:column"><b style="font-size:15px">${esc(u.title)}</b><span style="font-size:13px;color:var(--muted)">${esc(u.sub)}</span></span></div>`).join("") : '<p class="empty">다가오는 일정이 없어요.</p>';
 }
@@ -150,10 +161,11 @@ function renderItems() {
 function renderPayments() {
   const itemName = (id) => (S.items.find((i) => i.id === id) || {}).name || "(지운 항목)";
   $("payRows").innerHTML = S.payments.slice().sort((x, y) => (y.date || "").localeCompare(x.date || "")).map((p) => `<tr>
-    <td>${p.date ? esc(fmtDate(p.date)) : "-"}</td><td>${esc(itemName(p.itemId))}</td><td>${esc(p.kind)}</td><td class="num"><b>${esc(won(p.amount))}</b></td>
-    <td>${esc(p.payer)}</td><td>${p.done ? '<span class="tag tag-ok">완료</span>' : '<span class="tag tag-warn">예정</span>'}</td><td>${esc(p.memo)}</td>
+    <td>${p.date ? esc(fmtDate(p.date)) : "-"}</td><td>${esc(itemName(p.itemId))}</td><td>${esc(p.kind)}</td><td class="num"><b>${esc(won(amountOf(p)))}</b></td>
+    <td class="num">${esc(won(shares(p).a))}</td><td class="num">${esc(won(shares(p).b))}</td><td>${p.done ? '<span class="tag tag-ok">완료</span>' : '<span class="tag tag-warn">예정</span>'}</td><td>${esc(p.memo)}</td>
     <td style="white-space:nowrap"><button type="button" class="btn-ghost" data-edit-pay="${esc(p.id)}">수정</button><button type="button" class="btn-ghost" data-del="payments:${esc(p.id)}" aria-label="결제 기록 삭제">삭제</button></td></tr>`).join("")
-    || '<tr><td colspan="8" class="empty">아직 결제 기록이 없어요.</td></tr>';
+    || '<tr><td colspan="9" class="empty">아직 결제 기록이 없어요.</td></tr>';
+  renderSplit();
 }
 
 function renderEvents() {
@@ -182,6 +194,7 @@ function fillInfoForm() {
   f.displayName.value = S.profile.displayName || "";
   f.a.value = (c.names && c.names.a) || ""; f.b.value = (c.names && c.names.b) || "";
   f.weddingDate.value = c.weddingDate || ""; f.venue.value = c.venue || "";
+  f.ceremonyTime.value = c.ceremonyTime || ""; f.hall.value = c.hall || ""; f.venueAddr.value = c.venueAddr || "";
   f.budgetTotal.value = c.budgetTotal ? c.budgetTotal.toLocaleString("ko-KR") : "";
   infoFilled = true;
 }
@@ -219,8 +232,13 @@ const editItem = bindForm("itemForm", "items",
   (f) => ({ name: clip(f.name.value, 40), budget: parseWon(f.budget.value), contract: parseWon(f.contract.value), extra: parseWon(f.extra.value), memo: clip(f.memo.value, 100) }),
   (f, d) => { f.name.value = d.name; f.budget.value = d.budget || ""; f.contract.value = d.contract || ""; f.extra.value = d.extra || ""; f.memo.value = d.memo || ""; });
 const editPay = bindForm("payForm", "payments",
-  (f) => { if (!f.itemId.value) { toast("먼저 예산 항목을 추가해 주세요"); return null; } return { itemId: f.itemId.value, kind: f.kind.value, amount: parseWon(f.amount.value), date: f.date.value, payer: f.payer.value, done: f.done.value === "1", memo: clip(f.memo.value, 100) }; },
-  (f, d) => { f.itemId.value = d.itemId; f.kind.value = d.kind; f.amount.value = d.amount; f.date.value = d.date || ""; f.payer.value = d.payer; f.done.value = d.done ? "1" : "0"; f.memo.value = d.memo || ""; });
+  (f) => {
+    if (!f.itemId.value) { toast("먼저 예산 항목을 추가해 주세요"); return null; }
+    const a = parseWon(f.amountA.value), b = parseWon(f.amountB.value);
+    if (a + b <= 0) { toast("낸 금액을 한 칸 이상 적어 주세요"); return null; }
+    return { itemId: f.itemId.value, kind: f.kind.value, amountA: a, amountB: b, amount: a + b, date: f.date.value, done: f.done.value === "1", memo: clip(f.memo.value, 100) };
+  },
+  (f, d) => { const x = shares(d); f.itemId.value = d.itemId; f.kind.value = d.kind; f.amountA.value = x.a || ""; f.amountB.value = x.b || ""; f.date.value = d.date || ""; f.done.value = d.done ? "1" : "0"; f.memo.value = d.memo || ""; });
 const editEvent = bindForm("eventForm", "events",
   (f) => ({ date: f.date.value, time: f.time.value, title: clip(f.title.value, 60), place: clip(f.place.value, 60) }),
   (f, d) => { f.date.value = d.date; f.time.value = d.time || ""; f.title.value = d.title; f.place.value = d.place || ""; });
@@ -277,7 +295,7 @@ $("infoForm").addEventListener("submit", async (e) => {
   try {
     await store.updateProfile({ displayName: clip(f.displayName.value, 20) });
     S.profile.displayName = clip(f.displayName.value, 20);
-    await store.updateCouple(S.cid, { names: { a: clip(f.a.value, 20), b: clip(f.b.value, 20) }, weddingDate: f.weddingDate.value, venue: clip(f.venue.value, 40), budgetTotal: parseWon(f.budgetTotal.value) });
+    await store.updateCouple(S.cid, { names: { a: clip(f.a.value, 20), b: clip(f.b.value, 20) }, weddingDate: f.weddingDate.value, ceremonyTime: f.ceremonyTime.value, venue: clip(f.venue.value, 40), hall: clip(f.hall.value, 30), venueAddr: clip(f.venueAddr.value, 80), budgetTotal: parseWon(f.budgetTotal.value) });
     renderMe(); toast("저장했어요");
   } catch (err) { toast(friendlyError(err)); }
 });
@@ -321,3 +339,116 @@ $("del").addEventListener("click", async () => {
     location.replace("index.html");
   } catch (err) { toast(friendlyError(err)); $("del").disabled = false; }
 });
+
+
+// ── 첫 화면(대표 사진·D-day) ──
+function heroDate(c) {
+  if (!c.weddingDate) return "예식일을 '내 정보'에서 입력해 주세요";
+  const d = new Date(c.weddingDate + "T00:00:00");
+  let t = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${"일월화수목금토"[d.getDay()]}요일`;
+  if (c.ceremonyTime) { const [h, m] = c.ceremonyTime.split(":").map(Number); t += ` ${h < 12 ? "오전" : "오후"} ${((h + 11) % 12) + 1}시${m ? " " + m + "분" : ""}`; }
+  return t;
+}
+function coverPhoto() {
+  return S.photos.find((p) => p.id === S.couple.coverPhotoId) || S.photos.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0];
+}
+function renderHero() {
+  const c = S.couple, { a, b } = names();
+  const may = c.weddingDate && c.weddingDate.slice(5, 7) === "05";
+  $("heroBadge").textContent = may ? "5월의 신랑 신부" : "우리의 결혼식";
+  $("heroDday").textContent = ddayLabel(c.weddingDate);
+  $("heroNames").textContent = `${a} ♥ ${b}`;
+  $("heroMeta").textContent = [heroDate(c), [c.venue, c.hall].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
+  const p = coverPhoto(), card = $("heroCard");
+  if (p && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p.data)) {
+    card.classList.add("photo"); card.style.backgroundImage = `url("${p.data}")`;
+  } else { card.classList.remove("photo"); card.style.backgroundImage = ""; }
+}
+
+// ── 우리 사진 ──
+function renderPhotos() {
+  const cover = coverPhoto();
+  $("photoGrid").innerHTML = S.photos.filter((p) => typeof p.data === "string" && p.data.startsWith("data:image/")).sort((x, y) => (x.createdAt || 0) - (y.createdAt || 0)).map((p) => `
+    <figure class="photo-item ${cover && cover.id === p.id ? "cover" : ""}" style="margin:0">
+      <img src="${esc(p.data)}" alt="${esc(p.caption || "우리 사진")}" loading="lazy">
+      ${p.caption ? `<figcaption class="cap">${esc(p.caption)}</figcaption>` : ""}
+      <div class="acts">
+        ${cover && cover.id === p.id ? '<button type="button" disabled>대표 사진</button>' : `<button type="button" data-cover="${esc(p.id)}">대표로</button>`}
+        <button type="button" data-delphoto="${esc(p.id)}" aria-label="사진 삭제">삭제</button>
+      </div>
+    </figure>`).join("") || '<p class="empty">아직 올린 사진이 없어요.</p>';
+}
+
+// 사진을 긴 변 1600px 이하 JPEG로 줄이고, 저장 한도(약 1MB) 안에 들어오게 화질을 맞춥니다.
+function shrink(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      let max = 1600, out = "";
+      for (let tries = 0; tries < 6; tries++) {
+        const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const cv = document.createElement("canvas");
+        cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        out = cv.toDataURL("image/jpeg", tries < 3 ? 0.82 - tries * 0.1 : 0.6);
+        if (out.length < 900000) break;
+        if (tries >= 2) max = Math.round(max * 0.8);
+      }
+      URL.revokeObjectURL(url);
+      out.length < 900000 ? resolve({ data: out }) : reject(new Error("사진이 너무 커요. 다른 사진으로 해 주세요."));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("사진을 읽을 수 없어요.")); };
+    img.src = url;
+  });
+}
+$("photoInput").addEventListener("change", async (e) => {
+  const files = [...e.target.files].filter((f) => f.type.startsWith("image/")).slice(0, 10);
+  if (!files.length) return;
+  if (S.photos.length + files.length > 30) { toast("사진은 30장까지 올릴 수 있어요"); return; }
+  toast(`사진 ${files.length}장을 올리는 중이에요…`);
+  try {
+    for (const f of files) {
+      const { data } = await shrink(f);
+      await store.add(S.cid, "photos", { data, caption: clip($("photoCap").value, 30) });
+    }
+    $("photoCap").value = ""; toast("사진을 올렸어요");
+  } catch (err) { toast(friendlyError(err)); }
+  e.target.value = "";
+});
+$("photoGrid").addEventListener("click", async (e) => {
+  const t = e.target;
+  try {
+    if (t.dataset.cover) { await store.updateCouple(S.cid, { coverPhotoId: t.dataset.cover }); toast("대표 사진으로 정했어요"); }
+    if (t.dataset.delphoto) {
+      if (!confirm("이 사진을 지울까요?")) return;
+      await store.remove(S.cid, "photos", t.dataset.delphoto);
+      if (S.couple.coverPhotoId === t.dataset.delphoto) await store.updateCouple(S.cid, { coverPhotoId: null });
+      toast("지웠어요");
+    }
+  } catch (err) { toast(friendlyError(err)); }
+});
+
+
+// ── 누가 얼마 냈나 ──
+function renderSplit() {
+  const { a, b } = names();
+  const done = S.payments.filter((p) => p.done), plan = S.payments.filter((p) => !p.done);
+  const sum = (list, k) => list.reduce((s, p) => s + shares(p)[k], 0);
+  const A = sum(done, "a"), B = sum(done, "b"), T = A + B;
+  const pa = T ? Math.round((A / T) * 100) : 0, pb = T ? 100 - pa : 0;
+  const diff = Math.abs(A - B), more = A > B ? a : b;
+  $("splitStats").innerHTML = `
+    <div class="stat" style="background:var(--accent-tint)"><span class="label">${esc(a)}이(가) 낸 돈</span><span class="value">${esc(won(A))}</span><span class="sub">전체의 ${pa}%${sum(plan, "a") ? " · 예정 " + esc(won(sum(plan, "a"))) : ""}</span></div>
+    <div class="stat" style="background:var(--sage-tint)"><span class="label">${esc(b)}이(가) 낸 돈</span><span class="value">${esc(won(B))}</span><span class="sub">전체의 ${pb}%${sum(plan, "b") ? " · 예정 " + esc(won(sum(plan, "b"))) : ""}</span></div>
+    <div class="stat"><span class="label">함께 낸 돈 합계</span><span class="value">${esc(won(T))}</span><span class="sub">${T ? (diff ? `${esc(more)}이(가) ${esc(won(diff))} 더 냈어요` : "똑같이 냈어요") : "아직 결제 완료 기록이 없어요"}</span></div>`;
+  $("splitBar").innerHTML = T ? `<div class="bar" style="height:14px;display:flex;background:#D8E6D9" role="img" aria-label="${esc(a)} ${pa}%, ${esc(b)} ${pb}%"><span style="width:${pa}%;border-radius:999px 0 0 999px"></span></div>
+    <div class="row between" style="font-size:13px;color:var(--muted);margin-top:4px"><span>${esc(a)} ${pa}%</span><span>${esc(b)} ${pb}%</span></div>` : "";
+  const itemName = (id) => (S.items.find((i) => i.id === id) || {}).name || "(지운 항목)";
+  const by = {};
+  for (const p of done) { const k = p.itemId; by[k] = by[k] || { a: 0, b: 0 }; const x = shares(p); by[k].a += x.a; by[k].b += x.b; }
+  $("splitRows").innerHTML = Object.entries(by).map(([id, v]) => {
+    const t = v.a + v.b, r = t ? Math.round((v.a / t) * 100) : 0;
+    return `<tr><td><b>${esc(itemName(id))}</b></td><td class="num">${esc(won(v.a))}</td><td class="num">${esc(won(v.b))}</td><td class="num"><b>${esc(won(t))}</b></td>
+      <td style="min-width:140px"><div class="bar" style="display:flex;background:#D8E6D9"><span style="width:${r}%"></span></div><span style="font-size:12px;color:var(--muted)">${r} : ${100 - r}</span></td></tr>`;
+  }).join("") || '<tr><td colspan="5" class="empty">결제 완료 기록이 생기면 항목별로 나눠 보여 줘요.</td></tr>';
+}

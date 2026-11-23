@@ -5,7 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>결혼준비 도우미 — 웨딩노트 둘</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#C2475F">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="웨딩노트">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -28,12 +35,24 @@
       <div class="row" style="flex-wrap:nowrap"><span class="avatar" id="meInitial">나</span><div style="display:flex;flex-direction:column"><b id="meName">이름을 정해 주세요</b><span style="font-size:12px;color:var(--muted)" id="meVia">카카오 계정으로 로그인됨</span></div></div>
       <button type="button" class="btn-ghost" id="logout" style="align-self:flex-start">로그아웃</button>
     </div>
+    <div class="hidden" data-install style="background:var(--white);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px">
+      <b style="font-size:15px">휴대전화에 앱으로 설치하기</b>
+      <span data-tip style="font-size:13px;color:var(--muted)"></span>
+      <button type="button" class="btn btn-primary btn-sm hidden" style="align-self:flex-start">앱으로 설치</button>
+    </div>
   </aside>
 
   <main class="main" id="main">
 
     <!-- 준비 현황 -->
     <section data-section="summary">
+      <div class="hero-card" id="heroCard" style="margin-bottom:18px">
+        <div data-flowers="corner-right" class="fl-tr"></div><div data-flowers="corner-left" class="fl-bl"></div>
+        <span class="may-badge" style="align-self:flex-start;margin-bottom:auto" id="heroBadge">5월의 신랑 신부</span>
+        <span class="dd" id="heroDday">D-day</span>
+        <span class="names" id="heroNames"></span>
+        <span class="meta" id="heroMeta"></span>
+      </div>
       <div class="row between" style="align-items:flex-end;margin-bottom:18px">
         <div><div style="font-size:14px;color:var(--muted)" id="coupleLine"></div><h1 style="font-size:28px" id="headline">준비표</h1></div>
         <span class="notice"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3F6B4F" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 018 0v3"></path></svg>내 계정과 초대한 파트너만 볼 수 있어요</span>
@@ -94,17 +113,25 @@
         <form class="form" id="payForm">
           <label class="field" style="flex:2 1 160px">항목<select name="itemId" id="payItem" required></select></label>
           <label class="field">구분<select name="kind"><option>계약금</option><option>중도금</option><option>잔금</option><option>추가금</option><option>기타</option></select></label>
-          <label class="field">금액<input name="amount" required inputmode="numeric" placeholder="예: 300만"></label>
+          <label class="field"><span id="lblA">신랑이 낸 금액</span><input name="amountA" inputmode="numeric" placeholder="예: 200만"></label>
+          <label class="field"><span id="lblB">신부가 낸 금액</span><input name="amountB" inputmode="numeric" placeholder="예: 100만"></label>
           <label class="field">날짜<input name="date" type="date"></label>
-          <label class="field">낸 사람<select name="payer" id="payerSelect"></select></label>
           <label class="field">상태<select name="done"><option value="1">결제 완료</option><option value="0">결제 예정</option></select></label>
           <label class="field" style="flex:2 1 160px">메모<input name="memo" maxlength="100"></label>
           <input type="hidden" name="id">
           <button class="btn btn-primary" type="submit">추가</button>
           <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
         </form>
+        <p style="margin:0;font-size:13px;color:var(--muted)">한 번 낸 돈을 둘이 나눠 냈다면 두 칸에 각자 낸 금액을 적어 주세요. 한 사람만 냈다면 한 칸만 적으면 돼요.</p>
         <p class="empty hidden" id="payNeedItem">먼저 '예산·추가금'에 항목을 하나 이상 추가해 주세요.</p>
-        <div class="table-box"><table><thead><tr><th>날짜</th><th>항목</th><th>구분</th><th class="num">금액</th><th>낸 사람</th><th>상태</th><th>메모</th><th><span class="hidden">관리</span></th></tr></thead><tbody id="payRows"></tbody></table></div>
+        <div class="table-box"><table><thead><tr><th>날짜</th><th>항목</th><th>구분</th><th class="num">합계</th><th class="num" id="thA">신랑</th><th class="num" id="thB">신부</th><th>상태</th><th>메모</th><th><span class="hidden">관리</span></th></tr></thead><tbody id="payRows"></tbody></table></div>
+      </div>
+      <div class="panel" style="margin-top:18px">
+        <h2>누가 얼마 냈나요</h2>
+        <p style="margin:0;font-size:13px;color:var(--muted)">'결제 완료'로 적은 금액만 셉니다. 예정된 결제는 따로 보여 줘요.</p>
+        <div class="stats" id="splitStats"></div>
+        <div id="splitBar"></div>
+        <div class="table-box"><table><thead><tr><th>항목</th><th class="num" id="thA2">신랑</th><th class="num" id="thB2">신부</th><th class="num">합계</th><th>나눈 비율</th></tr></thead><tbody id="splitRows"></tbody></table></div>
       </div>
     </section>
 
@@ -152,10 +179,21 @@
           <label class="field">신랑 이름<input name="a" maxlength="20"></label>
           <label class="field">신부 이름<input name="b" maxlength="20"></label>
           <label class="field">예식일<input name="weddingDate" type="date"></label>
-          <label class="field">예식장<input name="venue" maxlength="40"></label>
+          <label class="field">예식 시간<input name="ceremonyTime" type="time"></label>
+          <label class="field">예식장<input name="venue" maxlength="40" placeholder="예: 더 시그너스 웨딩홀"></label>
+          <label class="field">홀 이름<input name="hall" maxlength="30" placeholder="예: ○○홀"></label>
+          <label class="field" style="flex:2 1 240px">예식장 주소<input name="venueAddr" maxlength="80"></label>
           <label class="field">총 예산<input name="budgetTotal" inputmode="numeric" placeholder="예: 3000만"></label>
           <button class="btn btn-primary" type="submit">저장</button>
         </form>
+      </div>
+      <div class="panel" style="max-width:760px;margin-top:18px">
+        <h2>우리 사진</h2>
+        <p style="margin:0;color:#4A5163">예식장 투어 때 찍은 버진로드 사진, 웨딩 촬영 사진 등을 올려 보세요. '대표로'를 누른 사진이 준비 현황 첫 화면에 크게 보여요. 사진은 두 사람만 볼 수 있는 곳에 저장돼요.</p>
+        <label class="drop" for="photoInput"><b style="color:var(--accent)">사진 고르기</b> · 한 번에 여러 장 가능(JPG·PNG). 올릴 때 알맞은 크기로 줄여요.</label>
+        <input type="file" id="photoInput" accept="image/*" multiple class="hidden">
+        <label class="field" style="max-width:360px">사진 설명(선택)<input id="photoCap" maxlength="30" placeholder="예: 버진로드"></label>
+        <div class="photos" id="photoGrid"></div>
       </div>
       <div class="panel" style="max-width:760px;margin-top:18px">
         <h2>내 정보 관리</h2>
@@ -172,6 +210,8 @@
     </section>
   </main>
 </div>
+<script type="module" src="js/flowers.js"></script>
 <script type="module" src="js/app.js"></script>
+<script type="module" src="js/pwa.js"></script>
 </body>
 </html>

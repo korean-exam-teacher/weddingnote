@@ -3,10 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>웨딩노트 둘 — 두 사람을 위한 결혼 준비 도우미</title>
+<title>웨딩노트 둘 — 5월의 신랑 신부를 위한 결혼 준비 도우미</title>
 <meta name="description" content="체크리스트, 예산, 일정, 추가금, 결제 내역을 한곳에서. 예비 배우자를 초대해 함께 관리하는 결혼 준비 도우미.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#C2475F">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="웨딩노트">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -23,21 +30,27 @@
 </header>
 
 <main>
-<section class="hero">
+<section class="hero has-flowers">
+  <div data-flowers="corner-left" class="fl-tl"></div><div data-flowers="corner-right" class="fl-br"></div>
   <div class="wrap">
     <div class="hero-text">
-      <span class="eyebrow">두 사람을 위한 결혼 준비 도우미</span>
-      <h1>둘이 함께 보는<br>한 장의 결혼 준비표</h1>
-      <p class="lead">체크리스트, 예산, 일정, 결제 내역을 한곳에 모으세요. 예비 배우자를 초대하면 같은 화면을 보며 함께 채워 갈 수 있어요.</p>
+      <span class="may-badge">5월의 신랑 신부를 위한 결혼 준비 도우미</span>
+      <h1>꽃 피는 5월,<br>둘이 함께 채우는 준비표</h1>
+      <p class="lead">체크리스트, 예산, 일정, 결제 내역을 한곳에 모으세요. 오늘의 작은 준비가 모여 5월의 그날이 돼요.</p>
       <div class="row">
         <a class="btn btn-primary" href="login.html" style="min-height:54px;padding:0 28px;font-size:17px">카카오로 시작하기</a>
         <a class="btn btn-line" href="#how" style="min-height:54px;padding:0 28px;font-size:17px">어떻게 쓰나요</a>
       </div>
+      <div class="hidden" data-install style="background:var(--white);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;max-width:420px;flex-direction:column;gap:8px">
+        <b style="font-size:15px">휴대전화에 앱으로 설치하기</b>
+        <span data-tip style="font-size:13px;color:var(--muted)"></span>
+        <button type="button" class="btn btn-primary btn-sm hidden" style="align-self:flex-start">앱으로 설치</button>
+      </div>
     </div>
     <div class="preview" aria-label="준비표 미리보기">
       <div class="row between" style="align-items:flex-end">
-        <div><div style="font-size:14px;color:var(--muted)">예식일까지</div><div style="font-family:'IBM Plex Sans KR';font-size:44px;font-weight:700;color:var(--accent)">D-120</div></div>
-        <span style="font-size:14px;color:var(--muted)">예시 화면</span>
+        <div><div style="font-size:14px;color:var(--muted)">예식일까지</div><div style="font-family:'Gowun Dodum';font-size:44px;font-weight:700;color:var(--accent)">D-120</div></div>
+        <span style="font-size:14px;color:var(--muted)">5월의 그날까지 · 예시</span>
       </div>
       <div><div class="row between" style="font-size:15px"><b>준비 진행률</b><span style="color:var(--muted)">5 / 12</span></div><div class="bar" style="margin-top:8px"><span style="width:42%"></span></div></div>
       <div class="task done"><input type="checkbox" checked disabled aria-label="완료"><div class="t"><span class="title">웨딩홀 투어 일정 잡기</span></div></div>
@@ -86,13 +99,16 @@
 </section>
 
 <section class="wrap" style="padding-bottom:88px">
-  <div class="cta">
+  <div class="cta has-flowers"><div data-flowers="corner-right" class="fl-tr" style="width:180px;top:-40px;right:-30px;opacity:.9"></div>
     <div><h2 style="font-size:28px">오늘 할 일 하나부터 시작해요</h2><p style="margin:6px 0 0;color:#4A5163">카카오로 로그인하면 준비표가 바로 만들어져요.</p></div>
     <a class="btn btn-primary" href="login.html" style="min-height:54px;padding:0 28px">무료로 시작하기</a>
   </div>
 </section>
 </main>
 
+<div data-flowers="garland" data-width="640" class="fl-garland" style="margin-bottom:8px"></div>
 <footer class="site"><div class="wrap"><span>© 웨딩노트 둘</span><span><a href="privacy.html"><b>개인정보 처리방침</b></a></span></div></footer>
+<script type="module" src="js/flowers.js"></script>
+<script type="module" src="js/pwa.js"></script>
 </body>
 </html>
