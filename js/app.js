@@ -6,7 +6,7 @@ const $ = (id) => document.getElementById(id);
 const store = await getStore();
 if (store.demo) $("demo").classList.remove("hidden");
 
-const S = { cid: null, profile: {}, couple: {}, tasks: [], items: [], payments: [], events: [], photos: [], filter: "all" };
+const S = { cid: null, profile: {}, couple: {}, tasks: [], items: [], payments: [], events: [], photos: [], guests: [], gifts: [], dayplan: [], shopping: [], notes: [], filter: "all", gf: "all", gif: "all", noteQ: "" };
 const unsubs = [];
 
 // ── 로그인 확인 ──
@@ -79,7 +79,7 @@ function statusTag(it) {
 
 // ── 그리기 ──
 function renderAll() {
-  renderMe(); renderHero(); renderSummary(); renderTasks(); renderItems(); renderPayments(); renderEvents(); renderTogether(); renderPhotos(); fillInfoForm();
+  renderMe(); renderHero(); renderSummary(); renderTasks(); renderItems(); renderPayments(); renderEvents(); renderTogether(); renderPhotos(); renderGuests(); renderGifts(); renderDayplan(); renderShopping(); renderNotes(); fillInfoForm();
 }
 
 function renderMe() {
@@ -452,3 +452,187 @@ function renderSplit() {
       <td style="min-width:140px"><div class="bar" style="display:flex;background:#D8E6D9"><span style="width:${r}%"></span></div><span style="font-size:12px;color:var(--muted)">${r} : ${100 - r}</span></td></tr>`;
   }).join("") || '<tr><td colspan="5" class="empty">결제 완료 기록이 생기면 항목별로 나눠 보여 줘요.</td></tr>';
 }
+
+
+// ══════════ 새 메뉴 ══════════
+const sideName = (k) => (k === "b" ? names().b : names().a) + "측";
+const sideTag = (k) => `<span class="tag ${k === "b" ? "side-b" : "side-a"}">${esc(sideName(k))}</span>`;
+function sideLabels() {
+  document.querySelectorAll(".sideA").forEach((el) => (el.textContent = sideName("a")));
+  document.querySelectorAll(".sideB").forEach((el) => (el.textContent = sideName("b")));
+}
+function filterBar(id, key, rerender) {
+  $(id).addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    S[key] = b.dataset.f;
+    $(id).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    rerender();
+  });
+}
+const num = (v, max) => Math.max(0, Math.min(max, parseInt(v, 10) || 0));
+
+// ── 하객 명단 ──
+function renderGuests() {
+  sideLabels();
+  const G = S.guests;
+  const live = G.filter((g) => g.attend !== "불참");
+  const cnt = (list) => list.reduce((s, g) => s + (g.count || 0), 0);
+  const sent = G.filter((g) => g.invite && g.invite !== "아직").length;
+  $("guestStats").innerHTML = `
+    <div class="stat"><span class="label">예상 하객 수 (식권)</span><span class="value">${cnt(live)}명</span><span class="sub">불참으로 표시한 분은 빼고 셌어요</span></div>
+    <div class="stat"><span class="label">${esc(sideName("a"))}</span><span class="value">${cnt(live.filter((g) => g.side !== "b"))}명</span><span class="sub">명단 ${G.filter((g) => g.side !== "b").length}건</span></div>
+    <div class="stat"><span class="label">${esc(sideName("b"))}</span><span class="value">${cnt(live.filter((g) => g.side === "b"))}명</span><span class="sub">명단 ${G.filter((g) => g.side === "b").length}건</span></div>
+    <div class="stat"><span class="label">청첩장 보냄</span><span class="value">${sent} / ${G.length}</span><div class="bar"><span style="width:${G.length ? Math.round((sent / G.length) * 100) : 0}%"></span></div></div>`;
+  const f = S.gf;
+  const rows = G.filter((g) => f === "all" || (f === "notsent" ? (!g.invite || g.invite === "아직") : (f === "b" ? g.side === "b" : g.side !== "b")))
+    .sort((x, y) => (x.side || "a").localeCompare(y.side || "a") || (x.group || "").localeCompare(y.group || "") || (x.name || "").localeCompare(y.name || "", "ko"));
+  $("guestRows").innerHTML = rows.map((g) => `<tr>
+    <td><b>${esc(g.name)}</b></td><td>${sideTag(g.side)}</td><td>${esc(g.group)}</td><td class="num">${esc(g.count ?? 1)}</td>
+    <td><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" class="mini-check" data-gsent="${esc(g.id)}" ${g.invite && g.invite !== "아직" ? "checked" : ""} aria-label="${esc(g.name)} 청첩장 보냄">${esc(g.invite && g.invite !== "아직" ? g.invite : "아직")}</label></td>
+    <td>${g.attend === "참석" ? '<span class="tag tag-ok">참석</span>' : g.attend === "불참" ? '<span class="tag" style="background:var(--line2);color:#4A5163">불참</span>' : '<span class="tag tag-warn">미정</span>'}</td>
+    <td>${esc(g.memo)}</td>
+    <td style="white-space:nowrap"><button type="button" class="btn-ghost" data-edit-guest="${esc(g.id)}">수정</button><button type="button" class="btn-ghost" data-del="guests:${esc(g.id)}" aria-label="${esc(g.name)} 삭제">삭제</button></td></tr>`).join("")
+    || `<tr><td colspan="8" class="empty">${G.length ? "해당하는 분이 없어요." : "아직 명단이 없어요. 위에서 한 분씩 추가해 보세요."}</td></tr>`;
+  $("guestNames").innerHTML = G.map((g) => `<option value="${esc(g.name)}">`).join("");
+}
+const editGuest = bindForm("guestForm", "guests",
+  (f) => ({ name: clip(f.name.value, 30), side: f.side.value === "b" ? "b" : "a", group: f.group.value, count: num(f.count.value, 50), invite: f.invite.value, attend: f.attend.value, memo: clip(f.memo.value, 60) }),
+  (f, d) => { f.name.value = d.name; f.side.value = d.side || "a"; f.group.value = d.group; f.count.value = d.count ?? 1; f.invite.value = d.invite || "아직"; f.attend.value = d.attend || "미정"; f.memo.value = d.memo || ""; });
+filterBar("guestFilters", "gf", renderGuests);
+
+// ── 축의금 ──
+function renderGifts() {
+  const L = S.gifts, sum = (list) => list.reduce((s, x) => s + (x.amount || 0), 0);
+  const done = L.filter((x) => x.thanked).length;
+  $("giftStats").innerHTML = `
+    <div class="stat"><span class="label">축의금 합계</span><span class="value">${esc(won(sum(L)))}</span><span class="sub">${L.length}건</span></div>
+    <div class="stat"><span class="label">${esc(sideName("a"))}</span><span class="value">${esc(won(sum(L.filter((x) => x.side !== "b"))))}</span><span class="sub">${L.filter((x) => x.side !== "b").length}건</span></div>
+    <div class="stat"><span class="label">${esc(sideName("b"))}</span><span class="value">${esc(won(sum(L.filter((x) => x.side === "b"))))}</span><span class="sub">${L.filter((x) => x.side === "b").length}건</span></div>
+    <div class="stat"><span class="label">감사 인사</span><span class="value">${done} / ${L.length}</span><div class="bar"><span style="width:${L.length ? Math.round((done / L.length) * 100) : 0}%"></span></div></div>`;
+  const f = S.gif;
+  const rows = L.filter((x) => f === "all" || (f === "todo" ? !x.thanked : (f === "b" ? x.side === "b" : x.side !== "b")))
+    .sort((x, y) => (x.name || "").localeCompare(y.name || "", "ko"));
+  $("giftRows").innerHTML = rows.map((x) => `<tr>
+    <td><b>${esc(x.name)}</b></td><td>${sideTag(x.side)}</td><td class="num"><b>${esc(won(x.amount))}</b></td><td>${esc(x.method)}</td>
+    <td><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" class="mini-check" data-thank="${esc(x.id)}" ${x.thanked ? "checked" : ""} aria-label="${esc(x.name)} 감사 인사 완료">${x.thanked ? "했어요" : "아직"}</label></td>
+    <td>${esc(x.memo)}</td>
+    <td style="white-space:nowrap"><button type="button" class="btn-ghost" data-edit-gift="${esc(x.id)}">수정</button><button type="button" class="btn-ghost" data-del="gifts:${esc(x.id)}" aria-label="${esc(x.name)} 기록 삭제">삭제</button></td></tr>`).join("")
+    || `<tr><td colspan="7" class="empty">${L.length ? "해당하는 기록이 없어요." : "결혼식 뒤 받은 축의금을 적어 두면 감사 인사까지 한 번에 챙길 수 있어요."}</td></tr>`;
+}
+const editGift = bindForm("giftForm", "gifts",
+  (f) => ({ name: clip(f.name.value, 30), side: f.side.value === "b" ? "b" : "a", amount: parseWon(f.amount.value), method: f.method.value, thanked: f.thanked.value === "1", memo: clip(f.memo.value, 60) }),
+  (f, d) => { f.name.value = d.name; f.side.value = d.side || "a"; f.amount.value = d.amount || ""; f.method.value = d.method || "현금"; f.thanked.value = d.thanked ? "1" : "0"; f.memo.value = d.memo || ""; });
+filterBar("giftFilters", "gif", renderGifts);
+// 하객 이름을 고르면 어느 쪽인지 자동으로 맞춤
+$("giftForm").elements.name.addEventListener("change", (e) => {
+  const g = S.guests.find((x) => x.name === e.target.value); if (g) $("giftForm").elements.side.value = g.side || "a";
+});
+
+// ── 당일 시간표 ──
+function renderDayplan() {
+  const c = S.couple, { a, b } = names();
+  $("dayplanDate").textContent = c.weddingDate ? heroDate(c) : "";
+  $("ownerList").innerHTML = ["함께", a, b, "신랑 어머니", "신부 어머니", "들러리", "플래너", "사회자"].map((x) => `<option value="${esc(x)}">`).join("");
+  const L = S.dayplan.slice().sort((x, y) => (x.time || "").localeCompare(y.time || ""));
+  $("dayList").innerHTML = L.map((p) => `<div class="plan ${p.done ? "done" : ""}">
+      <input type="checkbox" class="mini-check" data-dpdone="${esc(p.id)}" ${p.done ? "checked" : ""} aria-label="${esc(p.title)} 완료">
+      <span class="tm">${esc(p.time)}</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column"><b class="tt" style="font-size:15px">${esc(p.title)}</b>
+        <span style="font-size:13px;color:var(--muted)">${esc([p.owner && "챙길 사람: " + p.owner, p.place, p.memo].filter(Boolean).join(" · "))}</span></span>
+      <button type="button" class="btn-ghost" data-edit-dp="${esc(p.id)}">수정</button><button type="button" class="btn-ghost" data-del="dayplan:${esc(p.id)}" aria-label="${esc(p.title)} 삭제">삭제</button></div>`).join("");
+  $("daySeedBox").classList.toggle("hidden", L.length > 0);
+}
+const editDay = bindForm("dayForm", "dayplan",
+  (f) => ({ time: f.time.value, title: clip(f.title.value, 50), owner: clip(f.owner.value, 20), place: clip(f.place.value, 30), memo: clip(f.memo.value, 60), ...(f.id.value ? {} : { done: false }) }),
+  (f, d) => { f.time.value = d.time; f.title.value = d.title; f.owner.value = d.owner || ""; f.place.value = d.place || ""; f.memo.value = d.memo || ""; });
+$("daySeed").addEventListener("click", async () => {
+  const base = S.couple.ceremonyTime || "12:00";
+  const [h, m] = base.split(":").map(Number), start = h * 60 + m;
+  const at = (off) => { const t = (start + off + 1440) % 1440; return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); };
+  const { a, b } = names();
+  const SEED = [[-270, "헤어·메이크업 시작", b], [-180, "신랑 헤어·메이크업", a], [-100, "예식장 도착·소지품 맡기기", "함께"], [-90, "신부 대기실 입장·스냅 촬영", b],
+    [-60, "하객 맞이 시작", a], [-45, "축의대 담당에게 장부·봉투 전달", "함께"], [-20, "사회자·축가와 마지막 확인", a], [0, "본식 시작", "함께"],
+    [40, "단체 사진 촬영", "함께"], [60, "폐백", "함께"], [90, "피로연 하객 인사", "함께"], [130, "축의금·방명록 회수, 소지품 확인", "함께"]];
+  $("daySeed").disabled = true;
+  try { for (const [off, title, owner] of SEED) await store.add(S.cid, "dayplan", { time: at(off), title, owner, place: "", memo: "", done: false }); toast(`예식 ${base} 기준으로 불러왔어요`); }
+  catch (err) { toast(friendlyError(err)); }
+  $("daySeed").disabled = false;
+});
+
+// ── 혼수·신혼집 ──
+const safeUrl = (u) => /^https?:\/\/[^\s"'<>]+$/i.test(u || "") ? u : "";
+function renderShopping() {
+  const L = S.shopping, groups = {};
+  for (const x of L) (groups[x.item] = groups[x.item] || []).push(x);
+  let bought = 0, planned = 0;
+  const html = Object.entries(groups).sort((p, q) => p[0].localeCompare(q[0], "ko")).map(([item, opts]) => {
+    const live = opts.filter((o) => o.status !== "안 사기로");
+    const done = opts.filter((o) => o.status === "구매 완료");
+    const priced = live.filter((o) => o.price > 0);
+    const min = priced.length ? Math.min(...priced.map((o) => o.price)) : 0;
+    if (done.length) bought += done.reduce((s, o) => s + (o.price || 0), 0); else planned += min;
+    const head = done.length ? '<span class="tag tag-ok">구매 완료</span>' : (min ? `<span style="font-size:14px">최저 <b>${esc(won(min))}</b></span>` : "");
+    return `<div class="shop-group"><header><b>${esc(item)} <span style="font-weight:400;font-size:13px;color:var(--muted)">${esc(opts[0].cat || "")} · 후보 ${opts.length}개</span></b>${head}</header>
+      ${opts.slice().sort((x, y) => (x.price || 9e15) - (y.price || 9e15)).map((o) => {
+        const u = safeUrl(o.url);
+        return `<div class="shop-opt" style="${o.status === "안 사기로" ? "opacity:.5" : ""}">
+          <span>${esc(o.option || "(후보 이름 없음)")}${u ? ` <a href="${esc(u)}" target="_blank" rel="noopener noreferrer">링크</a>` : ""}${o.memo ? ` <span style="font-size:13px;color:var(--muted)">· ${esc(o.memo)}</span>` : ""}</span>
+          <span class="tag ${o.status === "구매 완료" ? "tag-ok" : o.status === "살 것" ? "tag-info" : o.status === "안 사기로" ? "" : "tag-warn"}">${esc(o.status)}</span>
+          ${!done.length && min && o.price === min && o.status !== "안 사기로" ? '<span class="best">최저가</span>' : ""}
+          <span class="pr">${o.price ? esc(won(o.price)) : "가격 미정"}</span>
+          <button type="button" class="btn-ghost" data-edit-shop="${esc(o.id)}">수정</button><button type="button" class="btn-ghost" data-del="shopping:${esc(o.id)}" aria-label="${esc(item)} 후보 삭제">삭제</button></div>`;
+      }).join("")}</div>`;
+  }).join("");
+  $("shopList").innerHTML = html || '<p class="empty">사고 싶은 것을 적어 보세요. 같은 품목에 후보를 여러 개 넣으면 가격을 비교해 줘요.</p>';
+  $("shopItems").innerHTML = Object.keys(groups).map((k) => `<option value="${esc(k)}">`).join("");
+  $("shopStats").innerHTML = `
+    <div class="stat"><span class="label">이미 산 것</span><span class="value">${esc(won(bought))}</span><span class="sub">'구매 완료' 합계</span></div>
+    <div class="stat"><span class="label">앞으로 살 것 (최저가 기준)</span><span class="value">${esc(won(planned))}</span><span class="sub">아직 안 산 품목의 가장 싼 후보 합계</span></div>
+    <div class="stat"><span class="label">품목 수</span><span class="value">${Object.keys(groups).length}개</span><span class="sub">후보 ${L.length}개</span></div>`;
+}
+const editShop = bindForm("shopForm", "shopping",
+  (f) => {
+    const url = (f.url.value || "").trim();
+    if (url && !safeUrl(url)) { toast("링크는 https:// 로 시작하는 주소만 넣을 수 있어요"); return null; }
+    return { item: clip(f.thing.value, 30), cat: f.cat.value, option: clip(f.option.value, 50), price: parseWon(f.price.value), status: f.status.value, url: url.slice(0, 300), memo: clip(f.memo.value, 60) };
+  },
+  (f, d) => { f.thing.value = d.item; f.cat.value = d.cat || "가전"; f.option.value = d.option || ""; f.price.value = d.price || ""; f.status.value = d.status || "비교 중"; f.url.value = d.url || ""; f.memo.value = d.memo || ""; });
+
+// ── 결정 기록 ──
+function renderNotes() {
+  const q = (S.noteQ || "").trim();
+  const L = S.notes.filter((n) => !q || (n.topic + " " + n.decision + " " + (n.reason || "")).includes(q))
+    .sort((x, y) => (y.date || "").localeCompare(x.date || "") || (y.createdAt || 0) - (x.createdAt || 0));
+  $("noteList").innerHTML = L.map((n) => `<article class="note">
+      <span class="tp">${esc(n.topic)} · ${n.date ? esc(fmtDate(n.date)) : ""}</span>
+      <b style="font-size:16px">${esc(n.decision)}</b>
+      ${n.reason ? `<span style="font-size:14px;color:#4A5163">이유: ${esc(n.reason)}</span>` : ""}
+      <span class="row" style="justify-content:flex-end"><button type="button" class="btn-ghost" data-edit-note="${esc(n.id)}">수정</button><button type="button" class="btn-ghost" data-del="notes:${esc(n.id)}" aria-label="결정 기록 삭제">삭제</button></span></article>`).join("")
+    || `<p class="empty">${S.notes.length ? "찾는 기록이 없어요." : "아직 남긴 결정이 없어요."}</p>`;
+  const f = $("noteForm").elements; if (!f.date.value && !f.id.value) f.date.value = today();
+}
+const editNote = bindForm("noteForm", "notes",
+  (f) => ({ date: f.date.value || today(), topic: clip(f.topic.value, 30), decision: clip(f.decision.value, 100), reason: clip(f.reason.value, 200) }),
+  (f, d) => { f.date.value = d.date || ""; f.topic.value = d.topic; f.decision.value = d.decision; f.reason.value = d.reason || ""; });
+$("noteSearch").addEventListener("input", (e) => { S.noteQ = e.target.value; renderNotes(); });
+
+// ── 새 메뉴 목록 안의 버튼·체크 ──
+document.getElementById("main").addEventListener("click", (e) => {
+  const t = e.target, find = (col, id) => S[col].find((x) => x.id === id);
+  if (t.dataset.editGuest) editGuest(find("guests", t.dataset.editGuest));
+  if (t.dataset.editGift) editGift(find("gifts", t.dataset.editGift));
+  if (t.dataset.editDp) editDay(find("dayplan", t.dataset.editDp));
+  if (t.dataset.editShop) editShop(find("shopping", t.dataset.editShop));
+  if (t.dataset.editNote) editNote(find("notes", t.dataset.editNote));
+});
+document.getElementById("main").addEventListener("change", async (e) => {
+  const d = e.target.dataset;
+  try {
+    if (d.gsent) {
+      const g = S.guests.find((x) => x.id === d.gsent);
+      await store.update(S.cid, "guests", d.gsent, { invite: e.target.checked ? (g && g.invite && g.invite !== "아직" ? g.invite : "모바일") : "아직" });
+    }
+    if (d.thank) await store.update(S.cid, "gifts", d.thank, { thanked: e.target.checked });
+    if (d.dpdone) await store.update(S.cid, "dayplan", d.dpdone, { done: e.target.checked });
+  } catch (err) { toast(friendlyError(err)); }
+});
