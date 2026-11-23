@@ -207,3 +207,29 @@ tfoot td{font-weight:700;border-bottom:0}
 .note{border-left:0;background:var(--bg);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
 .note .tp{font-size:13px;font-weight:700;color:var(--accent)}
 @media (max-width:640px){.side nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}.side nav button{white-space:nowrap;flex:none}}
+
+/* ── 메뉴별 배너 ── */
+.banner{position:relative;overflow:hidden;border-radius:18px;min-height:150px;padding:22px 26px;margin-bottom:18px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;background:linear-gradient(120deg,#FCE8ED,#FBEFF2 60%,#EEF4EE);color:var(--ink);background-size:cover;background-position:center}
+.banner>[data-flowers]{position:absolute;z-index:0;pointer-events:none}
+.banner .fl-tr{width:clamp(110px,12vw,160px);top:-34px;right:-30px}
+.banner .fl-bl{width:clamp(90px,9vw,130px);bottom:-46px;left:-36px;opacity:.85}
+.banner .bn-text,.banner .bn-btn{position:relative;z-index:1}
+.bn-text{display:flex;flex-direction:column;gap:2px;padding-left:8px}
+.bn-sub{font-size:14px;color:var(--accent)}
+.bn-title{font-family:"Gowun Dodum",sans-serif;font-size:28px;font-weight:400;color:var(--accent)}
+.bn-btn{border:0;border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;background:rgba(255,255,255,.88);color:var(--ink);cursor:pointer;box-shadow:0 2px 8px rgba(43,20,32,.12)}
+.bn-btn:hover{background:#fff}
+.banner.photo{color:#fff}
+.banner.photo>[data-flowers]{display:none}
+.banner.photo::before{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(43,20,32,0) 25%,rgba(43,20,32,.62))}
+.banner.photo .bn-sub{color:rgba(255,255,255,.9)}
+.banner.photo .bn-title{color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.25)}
+@media (min-width:641px){.banner{min-height:170px}}
+@media (max-width:640px){.banner{min-height:120px;padding:16px 18px;border-radius:14px}.bn-title{font-size:23px}.bn-sub{font-size:13px}}
+.picker{border:0;border-radius:18px;padding:20px;width:min(560px,94vw);max-height:86vh;box-shadow:0 20px 60px rgba(43,20,32,.25);color:var(--ink)}
+.picker[open]{display:flex;flex-direction:column;gap:14px}
+.picker::backdrop{background:rgba(43,20,32,.4)}
+.picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;overflow:auto}
+.picker-grid button{padding:0;border:3px solid transparent;border-radius:12px;overflow:hidden;cursor:pointer;background:var(--accent-tint);aspect-ratio:4/3}
+.picker-grid button[aria-pressed="true"]{border-color:var(--accent)}
+.picker-grid img{width:100%;height:100%;object-fit:cover;display:block}
