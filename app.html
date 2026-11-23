@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>결혼준비 도우미 — 웨딩노트 둘</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="demo" class="demo-banner hidden">체험 모드예요. 이 브라우저에만 저장되고, 파트너 초대는 작동하지 않아요.</div>
+<div id="loading" style="padding:80px 24px;text-align:center;color:var(--muted)">준비표를 불러오는 중이에요…</div>
+
+<div class="app hidden" id="app">
+  <aside class="side">
+    <a class="brand" href="index.html" style="padding:0 8px;font-size:17px"><span class="brand-mark" style="width:32px;height:32px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" aria-hidden="true"><circle cx="9" cy="12" r="5"></circle><circle cx="15" cy="12" r="5"></circle></svg></span>웨딩노트 둘</a>
+    <nav aria-label="도우미 메뉴" id="tabs">
+      <button type="button" data-view="summary" aria-current="page">준비 현황</button>
+      <button type="button" data-view="checklist">체크리스트</button>
+      <button type="button" data-view="budget">예산·추가금</button>
+      <button type="button" data-view="payments">결제 내역</button>
+      <button type="button" data-view="schedule">일정</button>
+      <button type="button" data-view="together">함께 관리</button>
+      <button type="button" data-view="mine">내 정보</button>
+    </nav>
+    <div class="me">
+      <div class="row" style="flex-wrap:nowrap"><span class="avatar" id="meInitial">나</span><div style="display:flex;flex-direction:column"><b id="meName">이름을 정해 주세요</b><span style="font-size:12px;color:var(--muted)" id="meVia">카카오 계정으로 로그인됨</span></div></div>
+      <button type="button" class="btn-ghost" id="logout" style="align-self:flex-start">로그아웃</button>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+
+    <!-- 준비 현황 -->
+    <section data-section="summary">
+      <div class="row between" style="align-items:flex-end;margin-bottom:18px">
+        <div><div style="font-size:14px;color:var(--muted)" id="coupleLine"></div><h1 style="font-size:28px" id="headline">준비표</h1></div>
+        <span class="notice"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3F6B4F" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 018 0v3"></path></svg>내 계정과 초대한 파트너만 볼 수 있어요</span>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="row" style="align-items:stretch;margin-top:18px">
+        <div class="panel" style="flex:1 1 380px;min-width:0"><div class="row between"><h2>남은 할 일</h2><button type="button" class="btn-ghost" data-go="checklist">전체 보기</button></div><div id="sumTasks"></div></div>
+        <div class="panel" style="flex:1 1 300px;min-width:0"><div class="row between"><h2>다가오는 일정·결제</h2><button type="button" class="btn-ghost" data-go="schedule">전체 보기</button></div><div id="sumUpcoming" style="display:flex;flex-direction:column;gap:10px"></div></div>
+      </div>
+    </section>
+
+    <!-- 체크리스트 -->
+    <section data-section="checklist" class="hidden">
+      <div class="panel">
+        <div class="row between"><h2>체크리스트</h2>
+          <div class="row filters" id="taskFilters">
+            <button type="button" data-f="all" aria-pressed="true">전체</button>
+            <button type="button" data-f="todo" aria-pressed="false">남은 일</button>
+            <button type="button" data-f="done" aria-pressed="false">완료</button>
+          </div>
+        </div>
+        <form class="form" id="taskForm">
+          <label class="field" style="flex:3 1 240px">할 일<input name="title" required maxlength="80" placeholder="예: 스튜디오 견적 비교하기"></label>
+          <label class="field">분류<select name="cat"><option>예식장</option><option>스드메</option><option>예물·예복</option><option>신혼여행</option><option>청첩장</option><option>가족</option><option>신혼집</option><option>기타</option></select></label>
+          <label class="field">시기<select name="when"><option>10~12개월 전</option><option>6~9개월 전</option><option>3~5개월 전</option><option>1~2개월 전</option><option>마지막 2주</option><option>시기 미정</option></select></label>
+          <label class="field">담당<select name="owner" id="ownerSelect"></select></label>
+          <input type="hidden" name="id">
+          <button class="btn btn-primary" type="submit">추가</button>
+          <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
+        </form>
+        <div id="taskList"></div>
+        <div id="seedBox" class="hidden" style="text-align:center;padding:12px"><p class="empty">아직 할 일이 없어요. 많이 쓰는 준비 목록으로 시작해 볼까요?</p><button type="button" class="btn btn-line" id="seed">기본 체크리스트 불러오기</button></div>
+      </div>
+    </section>
+
+    <!-- 예산·추가금 -->
+    <section data-section="budget" class="hidden">
+      <div class="panel">
+        <div class="row between"><h2>예산·추가금</h2><span style="font-size:14px;color:var(--muted)">결제한 금액은 '결제 내역'에 적으면 자동으로 반영돼요</span></div>
+        <form class="form" id="itemForm">
+          <label class="field" style="flex:2 1 180px">항목<input name="name" required maxlength="40" placeholder="예: 예식장"></label>
+          <label class="field">예산<input name="budget" inputmode="numeric" placeholder="예: 1500만"></label>
+          <label class="field">계약 금액<input name="contract" inputmode="numeric" placeholder="예: 14,000,000"></label>
+          <label class="field">추가금<input name="extra" inputmode="numeric" placeholder="예: 120만"></label>
+          <label class="field" style="flex:2 1 180px">메모<input name="memo" maxlength="100" placeholder="예: 원본 사진 구매 포함"></label>
+          <input type="hidden" name="id">
+          <button class="btn btn-primary" type="submit">추가</button>
+          <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
+        </form>
+        <div class="table-box"><table><thead><tr><th>항목</th><th class="num">예산</th><th class="num">계약 금액</th><th class="num">추가금</th><th class="num">결제 완료</th><th class="num">남은 금액</th><th>상태</th><th><span class="hidden">관리</span></th></tr></thead><tbody id="itemRows"></tbody><tfoot id="itemFoot"></tfoot></table></div>
+      </div>
+    </section>
+
+    <!-- 결제 내역 -->
+    <section data-section="payments" class="hidden">
+      <div class="panel">
+        <h2>결제 내역</h2>
+        <form class="form" id="payForm">
+          <label class="field" style="flex:2 1 160px">항목<select name="itemId" id="payItem" required></select></label>
+          <label class="field">구분<select name="kind"><option>계약금</option><option>중도금</option><option>잔금</option><option>추가금</option><option>기타</option></select></label>
+          <label class="field">금액<input name="amount" required inputmode="numeric" placeholder="예: 300만"></label>
+          <label class="field">날짜<input name="date" type="date"></label>
+          <label class="field">낸 사람<select name="payer" id="payerSelect"></select></label>
+          <label class="field">상태<select name="done"><option value="1">결제 완료</option><option value="0">결제 예정</option></select></label>
+          <label class="field" style="flex:2 1 160px">메모<input name="memo" maxlength="100"></label>
+          <input type="hidden" name="id">
+          <button class="btn btn-primary" type="submit">추가</button>
+          <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
+        </form>
+        <p class="empty hidden" id="payNeedItem">먼저 '예산·추가금'에 항목을 하나 이상 추가해 주세요.</p>
+        <div class="table-box"><table><thead><tr><th>날짜</th><th>항목</th><th>구분</th><th class="num">금액</th><th>낸 사람</th><th>상태</th><th>메모</th><th><span class="hidden">관리</span></th></tr></thead><tbody id="payRows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- 일정 -->
+    <section data-section="schedule" class="hidden">
+      <div class="panel">
+        <h2>일정</h2>
+        <form class="form" id="eventForm">
+          <label class="field">날짜<input name="date" type="date" required></label>
+          <label class="field">시간<input name="time" type="time"></label>
+          <label class="field" style="flex:2 1 200px">일정<input name="title" required maxlength="60" placeholder="예: 드레스 투어"></label>
+          <label class="field" style="flex:2 1 160px">장소<input name="place" maxlength="60"></label>
+          <input type="hidden" name="id">
+          <button class="btn btn-primary" type="submit">추가</button>
+          <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
+        </form>
+        <div id="eventList" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+    </section>
+
+    <!-- 함께 관리 -->
+    <section data-section="together" class="hidden">
+      <div class="panel" style="max-width:760px">
+        <h2>함께 관리</h2>
+        <p style="margin:0;color:#4A5163" id="memberLine"></p>
+        <div id="inviteBox" style="display:flex;flex-direction:column;gap:12px">
+          <p style="margin:0;color:#4A5163">초대 링크를 예비 배우자에게 보내 주세요. 링크를 받은 사람이 카카오로 로그인하고 수락하면 준비표가 연결돼요. 링크는 7일 동안, 한 번만 쓸 수 있어요.</p>
+          <div class="copybox hidden" id="linkBox"><label class="field" style="flex:1 1 260px"><span>초대 링크</span><input id="inviteLink" readonly></label><button type="button" class="btn btn-primary" id="copyLink" style="align-self:flex-end">복사</button><button type="button" class="btn btn-line" id="cancelInvite" style="align-self:flex-end">초대 취소</button></div>
+          <button type="button" class="btn btn-primary" id="makeInvite" style="align-self:flex-start">초대 링크 만들기</button>
+        </div>
+        <div class="danger-zone hidden" id="leaveBox">
+          <b>준비표 연결 끊기</b>
+          <p style="margin:0;font-size:14px;color:#4A5163">연결을 끊으면 나는 이 준비표를 더 볼 수 없고, 남은 사람은 계속 쓸 수 있어요. 나에게는 빈 준비표가 새로 만들어져요.</p>
+          <button type="button" class="btn btn-danger btn-sm" id="leave" style="align-self:flex-start">연결 끊기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 내 정보 -->
+    <section data-section="mine" class="hidden">
+      <div class="panel" style="max-width:760px">
+        <h2>기본 정보</h2>
+        <form class="form" id="infoForm">
+          <label class="field">화면에 보일 내 이름<input name="displayName" maxlength="20" placeholder="예: 민수"></label>
+          <label class="field">신랑 이름<input name="a" maxlength="20"></label>
+          <label class="field">신부 이름<input name="b" maxlength="20"></label>
+          <label class="field">예식일<input name="weddingDate" type="date"></label>
+          <label class="field">예식장<input name="venue" maxlength="40"></label>
+          <label class="field">총 예산<input name="budgetTotal" inputmode="numeric" placeholder="예: 3000만"></label>
+          <button class="btn btn-primary" type="submit">저장</button>
+        </form>
+      </div>
+      <div class="panel" style="max-width:760px;margin-top:18px">
+        <h2>내 정보 관리</h2>
+        <p style="margin:0;color:#4A5163">저장된 내 정보를 확인하고 파일로 내려받을 수 있어요. 카카오에서 받은 정보는 회원 식별 번호뿐이에요.</p>
+        <div class="row"><button type="button" class="btn btn-line" id="export">내 기록 내려받기 (JSON)</button><a class="btn btn-line" href="privacy.html">개인정보 처리방침</a></div>
+        <div class="danger-zone">
+          <b>회원 탈퇴</b>
+          <p style="margin:0;font-size:14px;color:#4A5163">탈퇴하면 혼자 쓰던 준비표의 모든 기록(체크리스트·예산·결제·일정)과 내 계정 정보가 곧바로 지워지고 되돌릴 수 없어요. 파트너와 함께 쓰던 준비표는 파트너에게 남아요. 본인 확인을 위해 카카오 로그인을 한 번 더 해요.</p>
+          <p style="margin:0;font-size:14px;color:#4A5163">카카오 쪽 연결은 카카오톡 › 설정 › 카카오계정 › 연결된 서비스 관리에서 끊을 수 있어요.</p>
+          <label class="check"><input type="checkbox" id="delOk"><span>위 내용을 확인했고 탈퇴할게요</span></label>
+          <button type="button" class="btn btn-danger btn-sm" id="del" disabled style="align-self:flex-start">탈퇴하고 모든 기록 지우기</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

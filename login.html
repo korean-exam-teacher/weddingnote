@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>로그인 — 웨딩노트 둘</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="demo" class="demo-banner hidden">체험 모드예요. 로그인 없이 이 브라우저에만 저장돼요. 실제 카카오 로그인은 설정안내.md를 따라 Firebase를 연결하면 켜져요.</div>
+<main class="login-page">
+  <section class="login-card" aria-labelledby="t">
+    <a class="brand" href="index.html"><span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" aria-hidden="true"><circle cx="9" cy="12" r="5"></circle><circle cx="15" cy="12" r="5"></circle></svg></span>웨딩노트 둘</a>
+    <div>
+      <h1 id="t" style="font-size:27px">카카오 계정으로<br>바로 시작하세요</h1>
+      <p style="margin:8px 0 0;color:#4A5163">비밀번호를 따로 만들 필요가 없어요. 입력한 준비 기록은 로그인한 계정에 저장되어 어느 기기에서든 이어 볼 수 있어요.</p>
+    </div>
+
+    <div class="consent">
+      <b>카카오에서 받아 오는 정보</b>
+      <div><span>회원 식별 번호</span><span style="color:var(--accent);font-weight:600">필수 · 로그인 확인용</span></div>
+      <div style="color:var(--muted)"><span>닉네임 · 이메일 · 전화번호 · 생일</span><span>받지 않아요</span></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <label class="check"><input type="checkbox" id="all"><b>모두 동의합니다</b></label>
+      <label class="check"><input type="checkbox" class="req" id="c1"><span>[필수] 서비스 이용약관 동의 <a href="privacy.html#terms" target="_blank" rel="noopener">보기</a></span></label>
+      <label class="check"><input type="checkbox" class="req" id="c2"><span>[필수] 개인정보 수집·이용 동의 <a href="privacy.html" target="_blank" rel="noopener">보기</a></span></label>
+    </div>
+
+    <button type="button" id="go" class="btn btn-kakao" disabled aria-describedby="hint">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="#191919" d="M12 4C7 4 3 7.1 3 11c0 2.5 1.7 4.7 4.2 5.9L6.4 20l3.5-2.3c.7.1 1.4.2 2.1.2 5 0 9-3.1 9-7s-4-7-9-7z"></path></svg>
+      카카오 로그인
+    </button>
+    <p id="hint" style="margin:-8px 0 0;font-size:13px;color:var(--muted);text-align:center">필수 항목에 동의하면 버튼이 켜져요.</p>
+    <p id="err" role="alert" style="margin:0;font-size:14px;color:#A11F2C;text-align:center"></p>
+  </section>
+
+  <section class="promise" aria-labelledby="p">
+    <h2 id="p" style="font-size:23px">내 정보는 이렇게 지켜요</h2>
+    <div class="item"><div><h3 style="font-size:17px">꼭 필요한 정보만 받아요</h3><p>로그인 확인에 필요한 회원 식별 번호 외에는 카카오에서 받지 않아요. 화면에 보일 이름은 직접 정해요.</p></div></div>
+    <div class="item"><div><h3 style="font-size:17px">두 사람만 볼 수 있어요</h3><p>준비표는 내 계정과 내가 초대한 파트너 한 명에게만 보여요. 서버의 보안 규칙이 다른 사람의 접근을 막아요.</p></div></div>
+    <div class="item"><div><h3 style="font-size:17px">탈퇴하면 바로 지워져요</h3><p>회원 탈퇴 시 체크리스트·예산·결제 기록과 로그인 정보를 곧바로 지워요.</p></div></div>
+    <div class="item"><div><h3 style="font-size:17px">내 기록은 내가 내려받아요</h3><p>저장된 내 정보를 언제든 열람하고 파일로 내려받을 수 있어요.</p></div></div>
+  </section>
+</main>
+<script type="module">
+import { getStore } from "./js/store.js";
+import { friendlyError } from "./js/common.js";
+const $ = (id) => document.getElementById(id);
+const reqs = [...document.querySelectorAll(".req")];
+const sync = () => { const ok = reqs.every((r) => r.checked); $("go").disabled = !ok; $("all").checked = ok; };
+reqs.forEach((r) => r.addEventListener("change", sync));
+$("all").addEventListener("change", (e) => { reqs.forEach((r) => (r.checked = e.target.checked)); sync(); });
+
+const next = new URLSearchParams(location.search).get("next");
+const dest = next && /^invite\.html\?t=[A-Za-z0-9]+$/.test(next) ? next : "app.html";
+
+const store = await getStore();
+if (store.demo) $("demo").classList.remove("hidden");
+let busy = false;
+store.onAuth(async (u) => {
+  if (u && !busy) location.replace(dest);
+});
+$("go").addEventListener("click", async () => {
+  $("err").textContent = "";
+  busy = true;
+  try {
+    await store.signIn();
+    await store.loadMe();
+    await store.updateProfile({ consent: { terms: true, privacy: true, at: Date.now(), version: "2026-11-23" } });
+    location.replace(dest);
+  } catch (e) {
+    // 로그인은 됐지만 허락 목록에 없는 계정 → 회원 번호를 보여 주는 화면으로
+    if (store.currentUid() && String((e && e.code) || "").includes("permission-denied")) { location.replace("app.html"); return; }
+    busy = false;
+    $("err").textContent = friendlyError(e);
+  }
+});
+</script>
+</body>
+</html>

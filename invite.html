@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>함께 관리 초대 — 웨딩노트 둘</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="invite-page">
+  <div class="invite-card" id="card">
+    <p style="color:var(--muted)">초대를 확인하고 있어요…</p>
+  </div>
+</main>
+<script type="module">
+import { getStore } from "./js/store.js";
+import { esc, friendlyError, KAKAO_ICON } from "./js/common.js";
+const card = document.getElementById("card");
+const token = new URLSearchParams(location.search).get("t") || "";
+const store = await getStore();
+
+const shareBox = `<div class="share"><b>함께 볼 수 있는 것</b><span>체크리스트 · 일정 · 예산 · 결제 내역</span><b style="padding-top:4px">공유되지 않는 것</b><span>각자의 카카오 계정, 로그인 정보</span></div>`;
+const fail = (msg) => { card.innerHTML = `<h1 style="font-size:22px">초대를 열 수 없어요</h1><p style="margin:0;color:#4A5163">${esc(msg)}</p><a class="btn btn-line" href="index.html">처음 화면으로</a>`; };
+
+if (!/^[A-Za-z0-9]{20,64}$/.test(token)) fail("링크 주소가 올바르지 않아요. 초대한 사람에게 링크를 다시 받아 주세요.");
+else store.onAuth(async (u) => {
+  if (!u) {
+    card.innerHTML = `<h1 style="font-size:23px">결혼 준비를 함께하자는<br>초대가 도착했어요</h1>
+      <p style="margin:0;color:#4A5163">카카오로 로그인하면 누가 보낸 초대인지 확인하고 수락할 수 있어요.</p>${shareBox}
+      <a class="btn btn-kakao" href="login.html?next=${encodeURIComponent("invite.html?t=" + token)}">${KAKAO_ICON}카카오로 로그인하기</a>`;
+    return;
+  }
+  try {
+    const inv = await store.readInvite(token);
+    if (!inv) return fail("이미 사용했거나 취소된 초대예요.");
+    if (inv.expired) return fail("초대 링크가 만료되었어요(7일). 새 링크를 받아 주세요.");
+    if (inv.mine) return fail("내가 만든 초대 링크예요. 예비 배우자에게 보내 주세요.");
+    card.innerHTML = `<h1 style="font-size:23px">${esc(inv.fromName || "예비 배우자")}님이<br>결혼 준비를 함께하자고 해요</h1>
+      <p style="margin:0;color:#4A5163">수락하면 같은 체크리스트와 예산표를 보고 함께 고칠 수 있어요.</p>${shareBox}
+      <p style="margin:0;font-size:13px;color:var(--warn);background:var(--warn-tint);border-radius:10px;padding:10px">이미 혼자 쓰던 준비표가 있다면, 수락할 때 그 준비표는 지워지고 초대받은 준비표로 옮겨 가요.</p>
+      <button type="button" class="btn btn-primary" id="ok" style="min-height:54px">수락하기</button>
+      <a href="app.html" style="font-size:15px;color:#4A5163">나중에 할게요</a>
+      <p id="err" role="alert" style="margin:0;color:#A11F2C;font-size:14px"></p>`;
+    document.getElementById("ok").addEventListener("click", async (e) => {
+      e.target.disabled = true;
+      try { await store.acceptInvite(token); location.replace("app.html#together"); }
+      catch (err) { document.getElementById("err").textContent = friendlyError(err); e.target.disabled = false; }
+    });
+  } catch (e) { fail(friendlyError(e)); }
+});
+</script>
+</body>
+</html>

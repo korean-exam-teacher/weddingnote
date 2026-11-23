@@ -1,0 +1,323 @@
+// 결혼준비 도우미 화면
+import { getStore, COLLECTIONS } from "./store.js";
+import { esc, won, parseWon, ddayLabel, fmtDate, toast, friendlyError } from "./common.js";
+
+const $ = (id) => document.getElementById(id);
+const store = await getStore();
+if (store.demo) $("demo").classList.remove("hidden");
+
+const S = { cid: null, profile: {}, couple: {}, tasks: [], items: [], payments: [], events: [], filter: "all" };
+const unsubs = [];
+
+// ── 로그인 확인 ──
+let started = false;
+store.onAuth(async (u) => {
+  if (!u) { location.replace("login.html"); return; }
+  if (started) return;
+  started = true;
+  try { await start(); } catch (e) {
+    if (String((e && e.code) || "").includes("permission-denied") && !store.demo) {
+      // 허락 목록(firestore.rules)에 아직 없는 계정
+      $("loading").innerHTML = `<div style="max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:12px;align-items:center">
+        <b style="font-size:18px;color:var(--ink)">아직 사용 허락이 되지 않은 계정이에요</b>
+        <span>이 사이트는 정해진 두 사람만 쓸 수 있어요. 처음 쓰는 거라면 아래 회원 번호를 관리자에게 보내 주세요.</span>
+        <code style="font-size:15px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;user-select:all">${esc(u.uid)}</code>
+        <button type="button" class="btn btn-line btn-sm" id="out">로그아웃</button></div>`;
+      $("out").addEventListener("click", async () => { await store.signOut(); location.replace("index.html"); });
+    } else $("loading").textContent = friendlyError(e);
+  }
+});
+
+async function start() {
+  const me = await store.loadMe();
+  S.cid = me.cid; S.profile = me.profile || {};
+  unsubs.forEach((f) => f()); unsubs.length = 0;
+  unsubs.push(store.watchCouple(S.cid, (c) => { S.couple = c; renderAll(); }));
+  for (const name of COLLECTIONS) unsubs.push(store.watch(S.cid, name, (list) => { S[name] = list; renderAll(); }));
+  $("loading").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  if (store.demo) $("meVia").textContent = "체험 모드";
+  const h = location.hash.slice(1);
+  if (h) show(h);
+}
+
+// ── 메뉴 ──
+function show(view) {
+  if (!document.querySelector(`[data-section="${view}"]`)) return;
+  document.querySelectorAll("[data-section]").forEach((s) => s.classList.toggle("hidden", s.dataset.section !== view));
+  document.querySelectorAll("#tabs button").forEach((b) => b.toggleAttribute("aria-current", b.dataset.view === view));
+  document.querySelector("#tabs [aria-current]")?.setAttribute("aria-current", "page");
+  history.replaceState(null, "", "#" + view);
+  window.scrollTo(0, 0);
+}
+document.getElementById("tabs").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) show(b.dataset.view); });
+document.addEventListener("click", (e) => { const g = e.target.closest("[data-go]"); if (g) show(g.dataset.go); });
+$("logout").addEventListener("click", async () => { await store.signOut(); location.replace("index.html"); });
+
+// ── 계산 ──
+const names = () => ({ a: (S.couple.names && S.couple.names.a) || "신랑", b: (S.couple.names && S.couple.names.b) || "신부" });
+const paidOf = (itemId) => S.payments.filter((p) => p.itemId === itemId && p.done).reduce((s, p) => s + (p.amount || 0), 0);
+const totalOf = (it) => (it.contract || 0) + (it.extra || 0);
+const today = () => new Date().toISOString().slice(0, 10);
+
+function statusTag(it) {
+  const t = totalOf(it), p = paidOf(it.id);
+  if (t > 0 && p >= t) return '<span class="tag tag-ok">결제 완료</span>';
+  if (p > 0) return '<span class="tag tag-info">진행 중</span>';
+  if (it.budget && t > it.budget) return '<span class="tag tag-warn">예산 초과</span>';
+  return '<span class="tag" style="background:var(--line2);color:#4A5163">결제 전</span>';
+}
+
+// ── 그리기 ──
+function renderAll() {
+  renderMe(); renderSummary(); renderTasks(); renderItems(); renderPayments(); renderEvents(); renderTogether(); fillInfoForm();
+}
+
+function renderMe() {
+  const n = S.profile.displayName || "";
+  $("meName").textContent = n || "이름을 정해 주세요";
+  $("meInitial").textContent = n ? n.slice(0, 1) : "나";
+  const { a, b } = names();
+  const opts = ["함께", a, b].map((x) => `<option>${esc(x)}</option>`).join("");
+  for (const id of ["ownerSelect", "payerSelect"]) {
+    const sel = $(id), v = sel.value; sel.innerHTML = opts; if (v) sel.value = v;
+  }
+}
+
+function renderSummary() {
+  const { a, b } = names();
+  const c = S.couple;
+  $("coupleLine").textContent = `${a} ♥ ${b}의 준비표`;
+  const left = S.tasks.filter((t) => !t.done).length;
+  $("headline").textContent = S.tasks.length ? (left ? `남은 할 일이 ${left}개예요` : "할 일을 모두 마쳤어요") : "준비를 시작해 볼까요?";
+  const done = S.tasks.length - left;
+  const pct = S.tasks.length ? Math.round((done / S.tasks.length) * 100) : 0;
+  const expected = S.items.reduce((s, it) => s + totalOf(it), 0);
+  const paid = S.payments.filter((p) => p.done).reduce((s, p) => s + (p.amount || 0), 0);
+  const nextPay = S.payments.filter((p) => !p.done).sort((x, y) => (x.date || "9").localeCompare(y.date || "9"))[0];
+  const itemName = (id) => (S.items.find((i) => i.id === id) || {}).name || "항목";
+  $("stats").innerHTML = `
+    <div class="stat"><span class="label">예식일까지</span><span class="value" style="color:var(--accent)">${esc(ddayLabel(c.weddingDate))}</span><span class="sub">${c.weddingDate ? esc(fmtDate(c.weddingDate)) : '<button type="button" class="btn-ghost" data-go="mine" style="padding:0;color:var(--accent)">예식일 입력하기</button>'}${c.venue ? " · " + esc(c.venue) : ""}</span></div>
+    <div class="stat"><span class="label">체크리스트</span><span class="value">${done} / ${S.tasks.length}</span><div class="bar"><span style="width:${pct}%"></span></div></div>
+    <div class="stat"><span class="label">총 예산</span><span class="value">${c.budgetTotal ? esc(won(c.budgetTotal)) : "미정"}</span><span class="sub">계약·추가금 합계 ${esc(won(expected))}${c.budgetTotal && expected > c.budgetTotal ? ' · <b style="color:var(--warn)">예산 초과</b>' : ""}</span></div>
+    <div class="stat"><span class="label">남은 금액</span><span class="value">${esc(won(Math.max(0, expected - paid)))}</span><span class="sub">${nextPay ? "다음 결제: " + esc(itemName(nextPay.itemId)) + " " + esc(nextPay.kind || "") : "예정된 결제 없음"}</span></div>`;
+
+  const todo = S.tasks.filter((t) => !t.done).slice(0, 5);
+  $("sumTasks").innerHTML = todo.length ? todo.map(taskRow).join("") : '<p class="empty">남은 할 일이 없어요.</p>';
+
+  const t = today();
+  const ups = [
+    ...S.events.filter((e) => e.date >= t).map((e) => ({ date: e.date, title: e.title, sub: [e.time, e.place].filter(Boolean).join(" · ") })),
+    ...S.payments.filter((p) => !p.done && p.date).map((p) => ({ date: p.date, title: `${itemName(p.itemId)} ${p.kind || ""} 결제`, sub: won(p.amount) }))
+  ].sort((x, y) => x.date.localeCompare(y.date)).slice(0, 5);
+  $("sumUpcoming").innerHTML = ups.length ? ups.map((u) => `<div class="event"><span class="d">${esc(fmtDate(u.date).replace(/ \(.\)/, ""))}</span><span style="display:flex;flex-direction:column"><b style="font-size:15px">${esc(u.title)}</b><span style="font-size:13px;color:var(--muted)">${esc(u.sub)}</span></span></div>`).join("") : '<p class="empty">다가오는 일정이 없어요.</p>';
+}
+
+function taskRow(t) {
+  return `<div class="task ${t.done ? "done" : ""}">
+    <input type="checkbox" ${t.done ? "checked" : ""} data-toggle="${esc(t.id)}" aria-label="${esc(t.title)} 완료">
+    <div class="t"><span class="title">${esc(t.title)}</span><span class="meta">${esc(t.cat)} · ${esc(t.when)} · 담당 ${esc(t.owner)}</span></div>
+    <button type="button" class="btn-ghost" data-edit-task="${esc(t.id)}">수정</button>
+    <button type="button" class="btn-ghost" data-del="tasks:${esc(t.id)}" aria-label="${esc(t.title)} 삭제">삭제</button>
+  </div>`;
+}
+
+const WHEN_ORDER = ["10~12개월 전", "6~9개월 전", "3~5개월 전", "1~2개월 전", "마지막 2주", "시기 미정"];
+function renderTasks() {
+  const list = S.tasks
+    .filter((t) => S.filter === "all" || (S.filter === "done" ? t.done : !t.done))
+    .sort((x, y) => WHEN_ORDER.indexOf(x.when) - WHEN_ORDER.indexOf(y.when) || (x.createdAt || 0) - (y.createdAt || 0));
+  $("taskList").innerHTML = list.map(taskRow).join("") || (S.tasks.length ? '<p class="empty">해당하는 항목이 없어요.</p>' : "");
+  $("seedBox").classList.toggle("hidden", S.tasks.length > 0);
+}
+
+function renderItems() {
+  let tb = 0, tc = 0, te = 0, tp = 0;
+  $("itemRows").innerHTML = S.items.slice().sort((x, y) => (x.createdAt || 0) - (y.createdAt || 0)).map((it) => {
+    const p = paidOf(it.id); tb += it.budget || 0; tc += it.contract || 0; te += it.extra || 0; tp += p;
+    return `<tr><td><b>${esc(it.name)}</b>${it.memo ? `<div style="font-size:13px;color:var(--muted)">${esc(it.memo)}</div>` : ""}</td>
+      <td class="num">${esc(won(it.budget))}</td><td class="num">${esc(won(it.contract))}</td><td class="num">${esc(won(it.extra))}</td>
+      <td class="num">${esc(won(p))}</td><td class="num"><b>${esc(won(Math.max(0, totalOf(it) - p)))}</b></td><td>${statusTag(it)}</td>
+      <td style="white-space:nowrap"><button type="button" class="btn-ghost" data-edit-item="${esc(it.id)}">수정</button><button type="button" class="btn-ghost" data-del="items:${esc(it.id)}" aria-label="${esc(it.name)} 삭제">삭제</button></td></tr>`;
+  }).join("") || '<tr><td colspan="8" class="empty">아직 항목이 없어요. 위에서 예식장, 스드메 같은 항목을 추가해 보세요.</td></tr>';
+  $("itemFoot").innerHTML = S.items.length ? `<tr><td>합계</td><td class="num">${esc(won(tb))}</td><td class="num">${esc(won(tc))}</td><td class="num">${esc(won(te))}</td><td class="num">${esc(won(tp))}</td><td class="num">${esc(won(Math.max(0, tc + te - tp)))}</td><td colspan="2"></td></tr>` : "";
+  const sel = $("payItem"), v = sel.value;
+  sel.innerHTML = S.items.map((it) => `<option value="${esc(it.id)}">${esc(it.name)}</option>`).join("");
+  if (v) sel.value = v;
+  $("payNeedItem").classList.toggle("hidden", S.items.length > 0);
+}
+
+function renderPayments() {
+  const itemName = (id) => (S.items.find((i) => i.id === id) || {}).name || "(지운 항목)";
+  $("payRows").innerHTML = S.payments.slice().sort((x, y) => (y.date || "").localeCompare(x.date || "")).map((p) => `<tr>
+    <td>${p.date ? esc(fmtDate(p.date)) : "-"}</td><td>${esc(itemName(p.itemId))}</td><td>${esc(p.kind)}</td><td class="num"><b>${esc(won(p.amount))}</b></td>
+    <td>${esc(p.payer)}</td><td>${p.done ? '<span class="tag tag-ok">완료</span>' : '<span class="tag tag-warn">예정</span>'}</td><td>${esc(p.memo)}</td>
+    <td style="white-space:nowrap"><button type="button" class="btn-ghost" data-edit-pay="${esc(p.id)}">수정</button><button type="button" class="btn-ghost" data-del="payments:${esc(p.id)}" aria-label="결제 기록 삭제">삭제</button></td></tr>`).join("")
+    || '<tr><td colspan="8" class="empty">아직 결제 기록이 없어요.</td></tr>';
+}
+
+function renderEvents() {
+  $("eventList").innerHTML = S.events.slice().sort((x, y) => (x.date + (x.time || "")).localeCompare(y.date + (y.time || ""))).map((e) => `
+    <div class="event" style="${e.date < today() ? "opacity:.6" : ""}"><span class="d">${esc(fmtDate(e.date).replace(/ \(.\)/, ""))}</span>
+      <span style="display:flex;flex-direction:column;flex:1;min-width:0"><b style="font-size:15px">${esc(e.title)}</b><span style="font-size:13px;color:var(--muted)">${esc([e.time, e.place].filter(Boolean).join(" · "))}</span></span>
+      <button type="button" class="btn-ghost" data-edit-event="${esc(e.id)}">수정</button><button type="button" class="btn-ghost" data-del="events:${esc(e.id)}" aria-label="${esc(e.title)} 삭제">삭제</button></div>`).join("")
+    || '<p class="empty">아직 일정이 없어요.</p>';
+}
+
+function renderTogether() {
+  const n = (S.couple.members || []).length;
+  $("memberLine").textContent = n >= 2 ? "파트너와 준비표가 연결되어 있어요. 두 사람이 고친 내용은 서로의 화면에 바로 반영돼요." : "아직 혼자 쓰고 있어요.";
+  $("inviteBox").classList.toggle("hidden", n >= 2);
+  $("leaveBox").classList.toggle("hidden", n < 2);
+  const tok = S.couple.inviteToken;
+  $("linkBox").classList.toggle("hidden", !tok);
+  $("makeInvite").textContent = tok ? "새 링크로 바꾸기" : "초대 링크 만들기";
+  if (tok) $("inviteLink").value = new URL("invite.html?t=" + tok, location.href).href;
+}
+
+let infoFilled = false;
+function fillInfoForm() {
+  if (infoFilled && document.activeElement && $("infoForm").contains(document.activeElement)) return;
+  const f = $("infoForm").elements, c = S.couple;
+  f.displayName.value = S.profile.displayName || "";
+  f.a.value = (c.names && c.names.a) || ""; f.b.value = (c.names && c.names.b) || "";
+  f.weddingDate.value = c.weddingDate || ""; f.venue.value = c.venue || "";
+  f.budgetTotal.value = c.budgetTotal ? c.budgetTotal.toLocaleString("ko-KR") : "";
+  infoFilled = true;
+}
+
+// ── 공통 폼 처리 ──
+function bindForm(formId, col, toData, fromDoc) {
+  const form = $(formId);
+  const submitBtn = form.querySelector('[type="submit"]');
+  const cancel = form.querySelector("[data-cancel]");
+  const reset = () => { form.reset(); form.elements.id.value = ""; submitBtn.textContent = "추가"; cancel.classList.add("hidden"); };
+  cancel.addEventListener("click", reset);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = toData(form.elements);
+    if (!data) return;
+    const id = form.elements.id.value;
+    try {
+      if (id) await store.update(S.cid, col, id, data); else await store.add(S.cid, col, data);
+      reset(); toast(id ? "고쳤어요" : "추가했어요");
+    } catch (err) { toast(friendlyError(err)); }
+  });
+  return (doc) => {
+    fromDoc(form.elements, doc); form.elements.id.value = doc.id;
+    submitBtn.textContent = "고치기"; cancel.classList.remove("hidden");
+    form.scrollIntoView({ behavior: "smooth", block: "center" });
+    form.querySelector("input:not([type=hidden]),select").focus();
+  };
+}
+const clip = (s, n) => String(s || "").trim().slice(0, n);
+
+const editTask = bindForm("taskForm", "tasks",
+  (f) => ({ title: clip(f.title.value, 80), cat: f.cat.value, when: f.when.value, owner: f.owner.value, ...(f.id.value ? {} : { done: false }) }),
+  (f, d) => { f.title.value = d.title; f.cat.value = d.cat; f.when.value = d.when; f.owner.value = d.owner; });
+const editItem = bindForm("itemForm", "items",
+  (f) => ({ name: clip(f.name.value, 40), budget: parseWon(f.budget.value), contract: parseWon(f.contract.value), extra: parseWon(f.extra.value), memo: clip(f.memo.value, 100) }),
+  (f, d) => { f.name.value = d.name; f.budget.value = d.budget || ""; f.contract.value = d.contract || ""; f.extra.value = d.extra || ""; f.memo.value = d.memo || ""; });
+const editPay = bindForm("payForm", "payments",
+  (f) => { if (!f.itemId.value) { toast("먼저 예산 항목을 추가해 주세요"); return null; } return { itemId: f.itemId.value, kind: f.kind.value, amount: parseWon(f.amount.value), date: f.date.value, payer: f.payer.value, done: f.done.value === "1", memo: clip(f.memo.value, 100) }; },
+  (f, d) => { f.itemId.value = d.itemId; f.kind.value = d.kind; f.amount.value = d.amount; f.date.value = d.date || ""; f.payer.value = d.payer; f.done.value = d.done ? "1" : "0"; f.memo.value = d.memo || ""; });
+const editEvent = bindForm("eventForm", "events",
+  (f) => ({ date: f.date.value, time: f.time.value, title: clip(f.title.value, 60), place: clip(f.place.value, 60) }),
+  (f, d) => { f.date.value = d.date; f.time.value = d.time || ""; f.title.value = d.title; f.place.value = d.place || ""; });
+
+// ── 목록 안의 버튼 ──
+document.getElementById("main").addEventListener("click", async (e) => {
+  const t = e.target;
+  const find = (col, id) => S[col].find((x) => x.id === id);
+  if (t.dataset.editTask) return editTask(find("tasks", t.dataset.editTask));
+  if (t.dataset.editItem) return editItem(find("items", t.dataset.editItem));
+  if (t.dataset.editPay) return editPay(find("payments", t.dataset.editPay));
+  if (t.dataset.editEvent) return editEvent(find("events", t.dataset.editEvent));
+  if (t.dataset.del) {
+    const [col, id] = t.dataset.del.split(":");
+    if (col === "items" && S.payments.some((p) => p.itemId === id) && !confirm("이 항목의 결제 기록도 함께 지울까요?")) return;
+    try {
+      await store.remove(S.cid, col, id);
+      if (col === "items") for (const p of S.payments.filter((p) => p.itemId === id)) await store.remove(S.cid, "payments", p.id);
+      toast("지웠어요");
+    } catch (err) { toast(friendlyError(err)); }
+  }
+});
+document.getElementById("main").addEventListener("change", async (e) => {
+  const id = e.target.dataset.toggle;
+  if (!id) return;
+  try { await store.update(S.cid, "tasks", id, { done: e.target.checked }); } catch (err) { toast(friendlyError(err)); }
+});
+$("taskFilters").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.filter = b.dataset.f;
+  $("taskFilters").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  renderTasks();
+});
+
+// 기본 체크리스트
+const SEED = [
+  ["예산 정하기", "가족", "10~12개월 전"], ["양가 인사드리기", "가족", "10~12개월 전"], ["예식장 투어·계약", "예식장", "10~12개월 전"],
+  ["스튜디오·드레스·메이크업 비교·계약", "스드메", "6~9개월 전"], ["신혼여행지 정하고 예약하기", "신혼여행", "6~9개월 전"], ["상견례", "가족", "6~9개월 전"],
+  ["웨딩 촬영", "스드메", "3~5개월 전"], ["예물·예복 준비", "예물·예복", "3~5개월 전"], ["신혼집·혼수 알아보기", "신혼집", "3~5개월 전"],
+  ["하객 명단 정리", "청첩장", "1~2개월 전"], ["청첩장 제작·발송", "청첩장", "1~2개월 전"], ["드레스 가봉", "스드메", "1~2개월 전"], ["사회·축가 부탁하기", "예식장", "1~2개월 전"],
+  ["잔금 정리", "기타", "마지막 2주"], ["식순·하객 수 최종 확인", "예식장", "마지막 2주"], ["당일 준비물 챙기기", "기타", "마지막 2주"]
+];
+$("seed").addEventListener("click", async () => {
+  $("seed").disabled = true;
+  try { for (const [title, cat, when] of SEED) await store.add(S.cid, "tasks", { title, cat, when, owner: "함께", done: false }); toast("기본 체크리스트를 불러왔어요"); }
+  catch (err) { toast(friendlyError(err)); }
+  $("seed").disabled = false;
+});
+
+// ── 기본 정보 ──
+$("infoForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target.elements;
+  try {
+    await store.updateProfile({ displayName: clip(f.displayName.value, 20) });
+    S.profile.displayName = clip(f.displayName.value, 20);
+    await store.updateCouple(S.cid, { names: { a: clip(f.a.value, 20), b: clip(f.b.value, 20) }, weddingDate: f.weddingDate.value, venue: clip(f.venue.value, 40), budgetTotal: parseWon(f.budgetTotal.value) });
+    renderMe(); toast("저장했어요");
+  } catch (err) { toast(friendlyError(err)); }
+});
+
+// ── 함께 관리 ──
+$("makeInvite").addEventListener("click", async () => {
+  if (store.demo) { toast("체험 모드에서는 초대 링크가 작동하지 않아요"); }
+  try { await store.createInvite(S.cid, S.profile.displayName || names().a); toast("초대 링크를 만들었어요"); } catch (err) { toast(friendlyError(err)); }
+});
+$("copyLink").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("inviteLink").value); toast("복사했어요. 카카오톡으로 보내 주세요"); }
+  catch (e) { $("inviteLink").select(); toast("링크를 길게 눌러 복사해 주세요"); }
+});
+$("cancelInvite").addEventListener("click", async () => {
+  try { await store.cancelInvite(S.cid, S.couple.inviteToken); toast("초대를 취소했어요"); } catch (err) { toast(friendlyError(err)); }
+});
+$("leave").addEventListener("click", async () => {
+  if (!confirm("정말 연결을 끊을까요? 이 준비표를 더 볼 수 없게 돼요.")) return;
+  try { await store.leave(S.cid); location.reload(); } catch (err) { toast(friendlyError(err)); }
+});
+
+// ── 내려받기·탈퇴 ──
+$("export").addEventListener("click", async () => {
+  try {
+    const data = await store.exportAll(S.cid);
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `weddingnote-my-data-${today()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } catch (err) { toast(friendlyError(err)); }
+});
+$("delOk").addEventListener("change", (e) => { $("del").disabled = !e.target.checked; });
+$("del").addEventListener("click", async () => {
+  if (!confirm("탈퇴하면 기록을 되돌릴 수 없어요. 계속할까요?")) return;
+  $("del").disabled = true;
+  try {
+    unsubs.forEach((f) => f()); unsubs.length = 0;
+    await store.deleteAccount(S.cid);
+    alert("탈퇴가 끝났어요. 그동안 이용해 주셔서 고마워요.");
+    location.replace("index.html");
+  } catch (err) { toast(friendlyError(err)); $("del").disabled = false; }
+});

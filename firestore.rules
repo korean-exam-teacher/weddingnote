@@ -1,0 +1,84 @@
+rules_version = '2';
+// 웨딩노트 둘 — Firestore 보안 규칙
+// 원칙: 로그인한 본인, 그리고 본인이 초대한 파트너 한 명만 준비표를 읽고 쓸 수 있다.
+//       그 밖의 모든 요청은 거절한다.
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    // 이 사이트를 쓸 수 있는 두 사람의 회원 번호(Firebase UID).
+    // 두 사람이 처음 로그인하면 화면에 회원 번호가 보이고, 그 값을 아래에 넣습니다.
+    // 목록에 없는 계정은 카카오 로그인에 성공해도 아무것도 읽거나 쓸 수 없습니다.
+    function allowed() {
+      return request.auth.uid in ['아직_비어_있음_1', '아직_비어_있음_2'];
+    }
+    function signedIn() { return request.auth != null && allowed(); }
+    function me() { return request.auth.uid; }
+    function coupleOf(cid) { return get(/databases/$(db)/documents/couples/$(cid)).data; }
+    function isMember(cid) {
+      return signedIn() && exists(/databases/$(db)/documents/couples/$(cid)) && me() in coupleOf(cid).members;
+    }
+    function smallString(v, n) { return v is string && v.size() <= n; }
+
+    // ── 내 정보: 본인만 ──
+    match /users/{uid} {
+      allow read, delete: if signedIn() && me() == uid;
+      allow create, update: if signedIn() && me() == uid
+        && request.resource.data.keys().hasOnly(['displayName', 'coupleId', 'createdAt', 'consent'])
+        && (!('displayName' in request.resource.data) || smallString(request.resource.data.displayName, 20));
+    }
+
+    // ── 준비표: 구성원(최대 2명)만 ──
+    match /couples/{cid} {
+      function fieldsOk() {
+        return request.resource.data.keys().hasOnly(['members', 'names', 'weddingDate', 'venue', 'budgetTotal', 'inviteToken', 'joinToken', 'createdAt'])
+          && request.resource.data.members is list && request.resource.data.members.size() <= 2;
+      }
+      // 구성원이 내용을 고침(구성원 목록은 그대로)
+      function memberEdit() {
+        return me() in resource.data.members
+          && request.resource.data.members == resource.data.members;
+      }
+      // 초대 링크로 들어옴: 유효한 초대 + 자리 1개 + 나만 추가
+      function joinWithInvite() {
+        let inv = get(/databases/$(db)/documents/invites/$(request.resource.data.joinToken)).data;
+        return !(me() in resource.data.members)
+          && resource.data.members.size() == 1
+          && request.resource.data.members == resource.data.members.concat([me()])
+          && inv.cid == cid
+          && inv.expiresAt > request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'joinToken']);
+      }
+      // 연결 끊기: 나만 빠짐(한 명은 남아야 함)
+      function leave() {
+        return me() in resource.data.members
+          && request.resource.data.members == resource.data.members.removeAll([me()])
+          && request.resource.data.members.size() >= 1
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']);
+      }
+
+      allow read: if signedIn() && me() in resource.data.members;
+      allow create: if signedIn() && fieldsOk() && request.resource.data.members == [me()];
+      allow update: if signedIn() && fieldsOk() && (memberEdit() || joinWithInvite() || leave());
+      allow delete: if signedIn() && resource.data.members == [me()];
+
+      // 체크리스트·예산 항목·결제·일정
+      match /{sub}/{docId} {
+        allow read, delete: if sub in ['tasks', 'items', 'payments', 'events'] && isMember(cid);
+        allow create, update: if sub in ['tasks', 'items', 'payments', 'events'] && isMember(cid)
+          && request.resource.data.size() <= 12;
+      }
+    }
+
+    // ── 초대: 링크를 아는 로그인 사용자만 한 건씩 열람, 목록 조회는 불가 ──
+    match /invites/{token} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && token.size() >= 20
+        && request.resource.data.createdBy == me()
+        && isMember(request.resource.data.cid)
+        && request.resource.data.keys().hasOnly(['cid', 'createdBy', 'fromName', 'expiresAt'])
+        && request.resource.data.expiresAt <= request.time + duration.value(8, 'd');
+      allow delete: if signedIn() && (resource.data.createdBy == me() || isMember(resource.data.cid));
+    }
+  }
+}
