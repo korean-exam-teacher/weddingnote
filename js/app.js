@@ -79,7 +79,7 @@ function statusTag(it) {
 
 // ── 그리기 ──
 function renderAll() {
-  renderMe(); renderHero(); renderSummary(); renderTasks(); renderItems(); renderPayments(); renderEvents(); renderTogether(); renderPhotos(); renderGuests(); renderGifts(); renderDayplan(); renderShopping(); renderNotes(); fillInfoForm();
+  renderMe(); renderHero(); renderSummary(); renderTasks(); renderItems(); renderPayments(); renderEvents(); renderTogether(); renderPhotos(); renderGuests(); renderGifts(); renderDayplan(); renderShopping(); renderNotes(); renderBanners(); fillInfoForm();
 }
 
 function renderMe() {
@@ -423,11 +423,70 @@ $("photoGrid").addEventListener("click", async (e) => {
       if (!confirm("이 사진을 지울까요?")) return;
       await store.remove(S.cid, "photos", t.dataset.delphoto);
       if (S.couple.coverPhotoId === t.dataset.delphoto) await store.updateCouple(S.cid, { coverPhotoId: null });
+      const bm = { ...bannerMap() }; let ch = false;
+      for (const k of Object.keys(bm)) if (bm[k] === t.dataset.delphoto) { delete bm[k]; ch = true; }
+      if (ch) await store.updateCouple(S.cid, { banners: bm });
       toast("지웠어요");
     }
   } catch (err) { toast(friendlyError(err)); }
 });
 
+
+// ── 메뉴별 배너 ──
+const okImg = (d) => typeof d === "string" && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(d);
+function bannerMap() { const m = S.couple && S.couple.banners; return m && typeof m === "object" ? m : {}; }
+function renderBanners() {
+  const map = bannerMap();
+  document.querySelectorAll("[data-banner]").forEach((el) => {
+    const p = S.photos.find((x) => x.id === map[el.dataset.banner]);
+    const id = p && okImg(p.data) ? p.id : "";
+    if (el.dataset.pid === id) return;
+    el.dataset.pid = id;
+    el.classList.toggle("photo", !!id);
+    el.style.backgroundImage = id ? `url("${p.data}")` : "";
+    el.querySelector(".bn-btn").textContent = id ? "사진 바꾸기" : "사진 넣기";
+  });
+}
+let pickKey = "";
+async function setBanner(id) {
+  const m = { ...bannerMap() };
+  if (id) m[pickKey] = id; else delete m[pickKey];
+  await store.updateCouple(S.cid, { banners: m });
+}
+function openPicker(key) {
+  pickKey = key;
+  const cur = bannerMap()[key];
+  const list = S.photos.filter((p) => okImg(p.data)).sort((x, y) => (x.createdAt || 0) - (y.createdAt || 0));
+  $("pickerGrid").innerHTML = list.map((p) => `<button type="button" data-pick="${esc(p.id)}" aria-pressed="${p.id === cur}" aria-label="${esc(p.caption || "우리 사진")}"><img src="${esc(p.data)}" alt="" loading="lazy"></button>`).join("") || '<p class="empty" style="grid-column:1/-1">아직 올린 사진이 없어요. 아래에서 새 사진을 올려 주세요.</p>';
+  $("photoPicker").showModal();
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-pickbanner]");
+  if (b) openPicker(b.dataset.pickbanner);
+});
+$("photoPicker").addEventListener("click", async (e) => {
+  const dlg = $("photoPicker");
+  if (e.target === dlg || e.target.closest("[data-pclose]")) { dlg.close(); return; }
+  const b = e.target.closest("[data-pick]");
+  if (!b) return;
+  try { await setBanner(b.dataset.pick); dlg.close(); toast("배너 사진을 바꿨어요"); } catch (err) { toast(friendlyError(err)); }
+});
+$("pickerNone").addEventListener("click", async () => {
+  try { await setBanner(""); $("photoPicker").close(); toast("꽃 배너로 바꿨어요"); } catch (err) { toast(friendlyError(err)); }
+});
+$("pickerUpload").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f || !f.type.startsWith("image/")) return;
+  if (S.photos.length >= 30) { toast("사진은 30장까지 올릴 수 있어요"); return; }
+  toast("사진을 올리는 중이에요…");
+  try {
+    const { data } = await shrink(f);
+    const ref = await store.add(S.cid, "photos", { data, caption: "" });
+    const id = typeof ref === "string" ? ref : ref && ref.id;
+    if (id) await setBanner(id);
+    $("photoPicker").close(); toast("배너 사진을 넣었어요");
+  } catch (err) { toast(friendlyError(err)); }
+});
 
 // ── 누가 얼마 냈나 ──
 function renderSplit() {
