@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<script src="js/inapp.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>결혼준비 도우미 — 웨딩노트 둘</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,6 +48,7 @@
     <!-- 준비 현황 -->
     <section data-section="summary">
       <div class="hero-card" id="heroCard" style="margin-bottom:18px">
+        <div data-flowers="aisle" class="aisle"></div>
         <div data-flowers="corner-right" class="fl-tr"></div><div data-flowers="corner-left" class="fl-bl"></div>
         <span class="may-badge" style="align-self:flex-start;margin-bottom:auto" id="heroBadge">5월의 신랑 신부</span>
         <span class="dd" id="heroDday">D-day</span>
@@ -186,6 +188,11 @@
           <label class="field">총 예산<input name="budgetTotal" inputmode="numeric" placeholder="예: 3000만"></label>
           <button class="btn btn-primary" type="submit">저장</button>
         </form>
+      </div>
+      <div class="hidden" data-install style="background:var(--white);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;max-width:760px;margin-top:18px">
+        <b style="font-size:15px">휴대전화에 앱으로 설치하기</b>
+        <span data-tip style="font-size:13px;color:var(--muted)"></span>
+        <button type="button" class="btn btn-primary btn-sm hidden" style="align-self:flex-start">앱으로 설치</button>
       </div>
       <div class="panel" style="max-width:760px;margin-top:18px">
         <h2>우리 사진</h2>
