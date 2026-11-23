@@ -50,7 +50,48 @@ function garland(width) {
   return s;
 }
 
+// 직접 그린 버진로드 장면(사진이 없을 때 첫 화면 배경)
+function aisle() {
+  const lerp = (a, b, t) => a + (b - a) * t;
+  let s = `<defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6DCE4"/><stop offset="1" stop-color="#FBEDF1"/></linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F1CFD9"/><stop offset="1" stop-color="#E9B9C6"/></linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF7F9"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1200" height="500" fill="url(#wall)"/>
+  <rect y="232" width="1200" height="268" fill="url(#floor)"/>`;
+  // 빛(샹들리에)
+  for (const [x, y, r] of [[600, 40, 120], [330, 60, 80], [870, 60, 80]]) s += `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#glow)"/>`;
+  for (const x of [330, 600, 870]) s += `<g fill="#FFFFFF" opacity=".9"><circle cx="${x}" cy="${x === 600 ? 46 : 64}" r="5"/><circle cx="${x - 14}" cy="${x === 600 ? 56 : 74}" r="3.5"/><circle cx="${x + 14}" cy="${x === 600 ? 56 : 74}" r="3.5"/></g>`;
+  // 끝의 문(빛)과 꽃 아치
+  s += `<path d="M512 232 V160 A88 92 0 0 1 688 160 V232 Z" fill="#FFF8FA"/><ellipse cx="600" cy="190" rx="70" ry="60" fill="url(#glow)"/>`;
+  for (let i = 0; i <= 14; i++) {
+    const a = Math.PI - (i / 14) * Math.PI, x = 600 + Math.cos(a) * 100, y = 168 - Math.sin(a) * 104 + (i === 0 || i === 14 ? 60 : 0);
+    s += leaf(x, y, 22, (i * 37) % 360, i % 2 ? C.leaf : C.leafDeep);
+    s += i % 3 === 0 ? bloom(x, y, 15, C.rose, C.roseDeep) : blossom(x, y, 10, i % 3 === 1 ? C.blush : C.peach);
+  }
+  // 버진로드(흰 길)
+  s += `<polygon points="566,232 634,232 900,500 300,500" fill="url(#road)"/>
+    <polyline points="566,232 300,500" stroke="#EFD3DB" stroke-width="3" fill="none"/><polyline points="634,232 900,500" stroke="#EFD3DB" stroke-width="3" fill="none"/>`;
+  // 양옆 꽃기둥(멀수록 작게)
+  for (const t of [0.18, 0.38, 0.62, 0.92]) {
+    for (const side of [-1, 1]) {
+      const x = side < 0 ? lerp(540, 150, t) : lerp(660, 1050, t), y = lerp(236, 520, t), h = lerp(40, 190, t), r = lerp(9, 40, t);
+      s += `<rect x="${(x - r * 0.22).toFixed(1)}" y="${(y - h).toFixed(1)}" width="${(r * 0.44).toFixed(1)}" height="${h.toFixed(1)}" rx="${(r * 0.1).toFixed(1)}" fill="#FFFFFF" opacity=".95"/>`;
+      s += `<ellipse cx="${x.toFixed(1)}" cy="${(y - h).toFixed(1)}" rx="${(r * 0.9).toFixed(1)}" ry="${(r * 0.25).toFixed(1)}" fill="#FFFFFF"/>`;
+      s += leaf(x - r * 0.4, y - h - r * 0.2, r * 1.3, 200, C.leaf) + leaf(x + r * 0.4, y - h - r * 0.2, r * 1.3, -20, C.leafDeep);
+      s += bloom(x, y - h - r * 0.55, r * 0.75, C.rose, C.roseDeep) + blossom(x - r * 0.7, y - h - r * 0.25, r * 0.4, C.blush) + blossom(x + r * 0.7, y - h - r * 0.3, r * 0.42, C.peach);
+    }
+  }
+  // 흩날린 꽃잎
+  const petals = [[560, 300], [640, 340], [520, 400], [700, 430], [610, 470], [470, 460], [760, 380], [590, 380], [430, 350], [820, 470]];
+  petals.forEach(([x, y], i) => { s += `<ellipse cx="${x}" cy="${y}" rx="${4 + (i % 3) * 2}" ry="${2.5 + (i % 2)}" transform="rotate(${i * 33} ${x} ${y})" fill="${[C.rose, C.blush, C.peach][i % 3]}" opacity=".85"/>`; });
+  return s;
+}
+
 export function flowerSVG(kind, width = 600) {
+  if (kind === "aisle") return `<svg viewBox="0 0 1200 500" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">${aisle()}</svg>`;
   if (kind === "garland") return `<svg viewBox="0 0 ${width} 60" width="100%" height="60" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">${garland(width)}</svg>`;
   const flip = kind === "corner-right" ? ` transform="translate(260 0) scale(-1 1)"` : "";
   return `<svg viewBox="0 0 260 220" aria-hidden="true" focusable="false"><g${flip}>${cornerBouquet()}</g></svg>`;
