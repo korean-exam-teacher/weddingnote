@@ -207,7 +207,7 @@ function makeDemoStore() {
     watchCouple(cid, cb) { return sub(() => cb(state().couple)); },
     async updateCouple(cid, data) { const s = state(); Object.assign(s.couple, data); save(s); },
     watch(cid, name, cb) { return sub(() => cb(state()[name] || [])); },
-    async add(cid, name, data) { const s = state(); (s[name] = s[name] || []).push({ id: id(), ...data, createdAt: Date.now(), by: "demo" }); save(s); },
+    async add(cid, name, data) { const s = state(), nid = id(); (s[name] = s[name] || []).push({ id: nid, ...data, createdAt: Date.now(), by: "demo" }); save(s); return { id: nid }; },
     async update(cid, name, docId, data) { const s = state(); const x = s[name].find((r) => r.id === docId); if (x) Object.assign(x, data); save(s); },
     async remove(cid, name, docId) { const s = state(); s[name] = s[name].filter((r) => r.id !== docId); save(s); },
     async createInvite(cid) { const t = randomToken(); const s = state(); s.couple.inviteToken = t; save(s); return t; },
