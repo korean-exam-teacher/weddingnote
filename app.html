@@ -29,6 +29,11 @@
       <button type="button" data-view="budget">예산·추가금</button>
       <button type="button" data-view="payments">결제 내역</button>
       <button type="button" data-view="schedule">일정</button>
+      <button type="button" data-view="guests">하객 명단</button>
+      <button type="button" data-view="gifts">축의금</button>
+      <button type="button" data-view="dayplan">당일 시간표</button>
+      <button type="button" data-view="shopping">혼수·신혼집</button>
+      <button type="button" data-view="notes">결정 기록</button>
       <button type="button" data-view="together">함께 관리</button>
       <button type="button" data-view="mine">내 정보</button>
     </nav>
@@ -151,6 +156,125 @@
           <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
         </form>
         <div id="eventList" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+    </section>
+
+
+    <!-- 하객 명단 -->
+    <section data-section="guests" class="hidden">
+      <div class="stats" id="guestStats" style="margin-bottom:18px"></div>
+      <div class="panel">
+        <div class="row between"><h2>하객 명단</h2>
+          <div class="row filters" id="guestFilters">
+            <button type="button" data-f="all" aria-pressed="true">전체</button>
+            <button type="button" data-f="a" aria-pressed="false" class="sideA">신랑측</button>
+            <button type="button" data-f="b" aria-pressed="false" class="sideB">신부측</button>
+            <button type="button" data-f="notsent" aria-pressed="false">청첩장 아직</button>
+          </div>
+        </div>
+        <form class="form" id="guestForm">
+          <label class="field" style="flex:2 1 160px">이름<input name="name" required maxlength="30" placeholder="예: 김민수 (가족이면 '큰이모네'처럼)"></label>
+          <label class="field">어느 쪽<select name="side"><option value="a" class="sideA">신랑측</option><option value="b" class="sideB">신부측</option></select></label>
+          <label class="field">관계<select name="group"><option>가족</option><option>친척</option><option>친구</option><option>직장</option><option>지인</option><option>기타</option></select></label>
+          <label class="field" style="flex:0 1 110px">예상 인원<input name="count" type="number" min="0" max="50" value="1"></label>
+          <label class="field">청첩장<select name="invite"><option>아직</option><option>모바일</option><option>종이</option><option>둘 다</option></select></label>
+          <label class="field">참석<select name="attend"><option>미정</option><option>참석</option><option>불참</option></select></label>
+          <label class="field" style="flex:2 1 160px">메모<input name="memo" maxlength="60" placeholder="예: 식권 2장, 주차 필요"></label>
+          <input type="hidden" name="id">
+          <button class="btn btn-primary" type="submit">추가</button>
+          <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
+        </form>
+        <div class="table-box"><table><thead><tr><th>이름</th><th>어느 쪽</th><th>관계</th><th class="num">인원</th><th>청첩장</th><th>참석</th><th>메모</th><th><span class="hidden">관리</span></th></tr></thead><tbody id="guestRows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- 축의금 -->
+    <section data-section="gifts" class="hidden">
+      <div class="stats" id="giftStats" style="margin-bottom:18px"></div>
+      <div class="panel">
+        <div class="row between"><h2>축의금 장부</h2>
+          <div class="row filters" id="giftFilters">
+            <button type="button" data-f="all" aria-pressed="true">전체</button>
+            <button type="button" data-f="a" aria-pressed="false" class="sideA">신랑측</button>
+            <button type="button" data-f="b" aria-pressed="false" class="sideB">신부측</button>
+            <button type="button" data-f="todo" aria-pressed="false">감사 인사 아직</button>
+          </div>
+        </div>
+        <form class="form" id="giftForm">
+          <label class="field" style="flex:2 1 160px">보낸 분<input name="name" required maxlength="30" list="guestNames" placeholder="하객 명단에서 골라도 돼요"></label>
+          <datalist id="guestNames"></datalist>
+          <label class="field">어느 쪽<select name="side"><option value="a" class="sideA">신랑측</option><option value="b" class="sideB">신부측</option></select></label>
+          <label class="field">금액<input name="amount" required inputmode="numeric" placeholder="예: 10만"></label>
+          <label class="field">받은 방법<select name="method"><option>현금</option><option>계좌이체</option><option>모바일 송금</option><option>기타</option></select></label>
+          <label class="field">감사 인사<select name="thanked"><option value="0">아직</option><option value="1">했어요</option></select></label>
+          <label class="field" style="flex:2 1 160px">메모<input name="memo" maxlength="60" placeholder="예: 화환도 보내 주심"></label>
+          <input type="hidden" name="id">
+          <button class="btn btn-primary" type="submit">추가</button>
+          <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
+        </form>
+        <div class="table-box"><table><thead><tr><th>보낸 분</th><th>어느 쪽</th><th class="num">금액</th><th>받은 방법</th><th>감사 인사</th><th>메모</th><th><span class="hidden">관리</span></th></tr></thead><tbody id="giftRows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- 당일 시간표 -->
+    <section data-section="dayplan" class="hidden">
+      <div class="panel">
+        <div class="row between"><h2>결혼식 당일 시간표</h2><span style="font-size:14px;color:var(--muted)" id="dayplanDate"></span></div>
+        <form class="form" id="dayForm">
+          <label class="field" style="flex:0 1 130px">시간<input name="time" type="time" required></label>
+          <label class="field" style="flex:2 1 200px">할 일<input name="title" required maxlength="50" placeholder="예: 헤어·메이크업 시작"></label>
+          <label class="field">챙길 사람<input name="owner" maxlength="20" list="ownerList" placeholder="예: 신부, 들러리, 어머니"></label>
+          <datalist id="ownerList"></datalist>
+          <label class="field">장소<input name="place" maxlength="30"></label>
+          <label class="field" style="flex:2 1 160px">메모<input name="memo" maxlength="60" placeholder="예: 부케 챙기기"></label>
+          <input type="hidden" name="id">
+          <button class="btn btn-primary" type="submit">추가</button>
+          <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
+        </form>
+        <div id="dayList" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div id="daySeedBox" class="hidden" style="text-align:center;padding:12px"><p class="empty">예식 시간을 기준으로 흔히 쓰는 순서를 불러와서 고쳐 쓰면 편해요.</p><button type="button" class="btn btn-line" id="daySeed">기본 시간표 불러오기</button></div>
+      </div>
+    </section>
+
+    <!-- 혼수·신혼집 -->
+    <section data-section="shopping" class="hidden">
+      <div class="stats" id="shopStats" style="margin-bottom:18px"></div>
+      <div class="panel">
+        <h2>혼수·신혼집 구매 목록</h2>
+        <p style="margin:0;font-size:13px;color:var(--muted)">같은 품목 이름으로 후보를 여러 개 적으면 한데 묶어서 가장 싼 후보를 표시해요.</p>
+        <form class="form" id="shopForm">
+          <label class="field" style="flex:1 1 140px">품목<input name="thing" required maxlength="30" list="shopItems" placeholder="예: 냉장고"></label>
+          <datalist id="shopItems"></datalist>
+          <label class="field">분류<select name="cat"><option>가전</option><option>가구</option><option>주방</option><option>침구·생활</option><option>신혼집</option><option>기타</option></select></label>
+          <label class="field" style="flex:2 1 180px">후보(모델·매장)<input name="option" maxlength="50" placeholder="예: ○○ 냉장고 870L, 백화점"></label>
+          <label class="field">가격<input name="price" inputmode="numeric" placeholder="예: 250만"></label>
+          <label class="field">상태<select name="status"><option>비교 중</option><option>살 것</option><option>구매 완료</option><option>안 사기로</option></select></label>
+          <label class="field" style="flex:2 1 180px">링크(선택)<input name="url" type="url" maxlength="300" placeholder="https://"></label>
+          <label class="field" style="flex:2 1 160px">메모<input name="memo" maxlength="60"></label>
+          <input type="hidden" name="id">
+          <button class="btn btn-primary" type="submit">추가</button>
+          <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
+        </form>
+        <div id="shopList" style="display:flex;flex-direction:column;gap:12px"></div>
+      </div>
+    </section>
+
+    <!-- 결정 기록 -->
+    <section data-section="notes" class="hidden">
+      <div class="panel">
+        <h2>결정 기록</h2>
+        <p style="margin:0;font-size:13px;color:var(--muted)">둘이 합의한 내용을 남겨 두면 나중에 "그때 왜 이렇게 정했지?" 할 때 바로 찾을 수 있어요.</p>
+        <form class="form" id="noteForm">
+          <label class="field" style="flex:0 1 160px">날짜<input name="date" type="date"></label>
+          <label class="field">주제<input name="topic" required maxlength="30" placeholder="예: 스드메"></label>
+          <label class="field" style="flex:3 1 260px">정한 내용<input name="decision" required maxlength="100" placeholder="예: ○○스튜디오로 계약"></label>
+          <label class="field" style="flex:3 1 260px">이유<input name="reason" maxlength="200" placeholder="예: 원본 포함 가격이 가장 낮고, 야외 촬영 가능"></label>
+          <input type="hidden" name="id">
+          <button class="btn btn-primary" type="submit">추가</button>
+          <button class="btn btn-line hidden" type="button" data-cancel>취소</button>
+        </form>
+        <div class="row filters"><label class="field" style="max-width:320px"><span>주제로 찾기</span><input id="noteSearch" placeholder="예: 예식장"></label></div>
+        <div id="noteList" style="display:flex;flex-direction:column;gap:10px"></div>
       </div>
     </section>
 
